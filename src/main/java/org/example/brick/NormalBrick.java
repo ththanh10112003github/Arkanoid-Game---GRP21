@@ -4,7 +4,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import org.example.GameObject;
 /**
- * The NormalBrick class represents a single breakable brick in the Arkanoid game.
+ * The NormalBrick class represents a single breakable brick in the game.
  * Each brick can be destroyed when hit by the ball and will no longer be drawn afterward.
  */
 public class NormalBrick extends GameObject {

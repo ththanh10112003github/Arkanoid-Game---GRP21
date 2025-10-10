@@ -2,7 +2,7 @@ package org.example;
 
 import javafx.scene.canvas.GraphicsContext;
 /**
- * Abstract base class for all drawable game objects in the Arkanoid game.
+ * Abstract base class for all drawable game objects in the game.
  * This class defines common properties such as position and size,
  * and enforces that all subclasses implement a draw method.
  */

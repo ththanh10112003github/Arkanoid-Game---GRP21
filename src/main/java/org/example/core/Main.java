@@ -5,7 +5,7 @@ import javafx.stage.Stage;
 import org.example.Game;
 
 /**
- * Main entry point of the Arkanoid game application.
+ * Main entry point of the game.
  * This class initializes the JavaFX environment and launches the Game instance.
  * It extends the JavaFX Application class, as required for all JavaFX programs.
  */

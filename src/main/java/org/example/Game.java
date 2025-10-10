@@ -14,8 +14,6 @@ import org.example.brick.NormalBrick;
 import java.util.List;
 
 /**
- * Main controller class for the Arkanoid-style game.
- *
  * This class manages the entire game lifecycle:
  * - Initializes game objects (paddle, ball, bricks)
  * - Handles keyboard input

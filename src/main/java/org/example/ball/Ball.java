@@ -4,7 +4,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import org.example.GameObject;
 /**
- * The Ball class represents the moving ball in the Arkanoid game.
+ * The Ball class represents the moving ball in the game.
  * It extends GameObject and includes velocity components for movement.
  */
 public class Ball extends GameObject {

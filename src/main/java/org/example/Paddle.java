@@ -3,12 +3,12 @@ package org.example;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 /**
- * The Paddle class represents the player's paddle in the Arkanoid game.
+ * The Paddle class represents the player's paddle in the game.
  * It can move left and right based on user input and prevents moving outside the screen.
  */
 public class Paddle extends GameObject {
     // The speed at which the paddle moves horizontally
-    private double speed = 7;
+    private double speed = 8 ;
 
     /**
      * Constructor initializes the paddle with position and size.

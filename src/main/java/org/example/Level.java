@@ -25,7 +25,7 @@ public class Level {
         int startX = 35;           // Starting X position of the first brick
         int startY = 50;           // Starting Y position of the first brick
 
-        // Generate a grid of bricks with small gaps between them
+        // Creates a grid of bricks with small gaps between them
         for (int row = 0; row < rows; row++) {
             for (int col = 0; col < cols; col++) {
                 double x = startX + col * (brickWidth + 5);  // Add spacing between columns

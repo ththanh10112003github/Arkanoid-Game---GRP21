@@ -4,7 +4,7 @@ import org.example.ball.Ball;
 import org.example.brick.NormalBrick;
 import java.util.List;
 /**
- * The CollisionManager class handles all collision detection in the Arkanoid game.
+ * The CollisionManager class handles all collision detection in the game.
  * It checks and responds to collisions between the ball, walls, paddle, and bricks.
  */
 public class CollisionManager {
@@ -36,16 +36,51 @@ public class CollisionManager {
      * @param paddle the player's paddle
      */
     public static void handleBallPaddleCollision(Ball ball, Paddle paddle) {
-        if (ball.getY() + ball.getSize() >= paddle.y &&
-                ball.getX() + ball.getSize() >= paddle.x &&
-                ball.getX() <= paddle.x + paddle.width &&
-                ball.getY() <= paddle.y + paddle.height) {
+        double ballLeft = ball.getX();
+        double ballRight = ball.getX() + ball.getSize();
+        double ballTop = ball.getY();
+        double ballBottom = ball.getY() + ball.getSize();
 
-            // Reverse the vertical direction when hitting the paddle
-            ball.reverseY();
+        double paddleLeft = paddle.x;
+        double paddleRight = paddle.x + paddle.width;
+        double paddleTop = paddle.y;
+        double paddleBottom = paddle.y + paddle.height;
+
+        // Check if ball overlaps with paddle
+        if (ballRight >= paddleLeft && ballLeft <= paddleRight &&
+                ballBottom >= paddleTop && ballTop <= paddleBottom) {
+
+            // Compute overlap on each side
+            double overlapLeft = ballRight - paddleLeft;
+            double overlapRight = paddleRight - ballLeft;
+            double overlapTop = ballBottom - paddleTop;
+            double overlapBottom = paddleBottom - ballTop;
+
+            // Determine the smallest overlap for this will tells us where the collision happened
+            double minOverlap = Math.min(
+                    Math.min(overlapLeft, overlapRight),
+                    Math.min(overlapTop, overlapBottom)
+            );
+
+            if (minOverlap == overlapTop) {
+                // Hit from the top → bounce vertically
+                ball.reverseY();
+                ball.y = paddleTop - ball.getSize(); // Adjust position to stay above paddle
+            } else if (minOverlap == overlapBottom) {
+                // Hit from below → bounce vertically
+                ball.reverseY();
+                ball.y = paddleBottom;
+            } else if (minOverlap == overlapLeft) {
+                // Hit from left side → bounce horizontally
+                ball.reverseX();
+                ball.x = paddleLeft - ball.getSize();
+            } else if (minOverlap == overlapRight) {
+                // Hit from right side → bounce horizontally
+                ball.reverseX();
+                ball.x = paddleRight;
+            }
         }
     }
-
     /**
      * Handles collision detection between the ball and all bricks.
      * When a collision occurs, the brick is destroyed and the ball bounces back.
