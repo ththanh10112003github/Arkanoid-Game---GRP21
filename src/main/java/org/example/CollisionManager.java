@@ -2,105 +2,173 @@ package org.example;
 
 import org.example.ball.Ball;
 import org.example.brick.NormalBrick;
-import java.util.List;
-/**
- * The CollisionManager class handles all collision detection in the game.
- * It checks and responds to collisions between the ball, walls, paddle, and bricks.
- */
+
 public class CollisionManager {
 
     /**
-     * Handles collisions between the ball and the window boundaries.
-     * The ball bounces back when it hits the left, right, or top wall.
+     * Generic AABB overlap check for any two GameObject instances.
      *
-     * @param ball the ball object
-     * @param width the width of the game area
-     * @param height the height of the game area
+     * @param a first object
+     * @param b second object
+     * @return true if AABB boxes overlap
      */
-    public static void handleBallWallCollision(Ball ball, double width, double height) {
-        // Bounce horizontally when hitting left or right wall
-        if (ball.getX() <= 0 || ball.getX() + ball.getSize() >= width) {
-            ball.reverseX();
-        }
-        // Bounce vertically when hitting the top wall
-        if (ball.getY() <= 0) {
-            ball.reverseY();
-        }
+    public static boolean isColliding(GameObject a, GameObject b) {
+        return (a.x + a.width) >= b.x && a.x <= (b.x + b.width)
+                && (a.y + a.height) >= b.y && a.y <= (b.y + b.height);
     }
 
     /**
-     * Handles collision detection between the ball and the paddle.
-     * If the ball hits the paddle, it reverses its vertical direction.
+     * Handles collision detection and response between the ball and the paddle.
+     * Uses AABB collision detection with overlap resolution to determine bounce direction.
      *
-     * @param ball the moving ball
-     * @param paddle the player's paddle
+     * @param ball the ball object
+     * @param paddle the paddle object
      */
     public static void handleBallPaddleCollision(Ball ball, Paddle paddle) {
+        if (!isColliding(ball, paddle)) {
+            return;
+        }
+        
+        // Calculate ball boundaries
         double ballLeft = ball.getX();
         double ballRight = ball.getX() + ball.getSize();
         double ballTop = ball.getY();
         double ballBottom = ball.getY() + ball.getSize();
 
+        // Calculate paddle boundaries
         double paddleLeft = paddle.x;
         double paddleRight = paddle.x + paddle.width;
         double paddleTop = paddle.y;
         double paddleBottom = paddle.y + paddle.height;
 
-        // Check if ball overlaps with paddle
-        if (ballRight >= paddleLeft && ballLeft <= paddleRight &&
-                ballBottom >= paddleTop && ballTop <= paddleBottom) {
+        // Calculate overlap on each side
+        double overlapLeft = ballRight - paddleLeft;
+        double overlapRight = paddleRight - ballLeft;
+        double overlapTop = ballBottom - paddleTop;
+        double overlapBottom = paddleBottom - ballTop;
 
-            // Compute overlap on each side
-            double overlapLeft = ballRight - paddleLeft;
-            double overlapRight = paddleRight - ballLeft;
-            double overlapTop = ballBottom - paddleTop;
-            double overlapBottom = paddleBottom - ballTop;
+        // Find minimum overlap to determine collision direction
+        double minOverlap = Math.min(
+                Math.min(overlapLeft, overlapRight),
+                Math.min(overlapTop, overlapBottom)
+        );
 
-            // Determine the smallest overlap for this will tells us where the collision happened
-            double minOverlap = Math.min(
-                    Math.min(overlapLeft, overlapRight),
-                    Math.min(overlapTop, overlapBottom)
-            );
+        // Determine collision direction and bounce accordingly
+        boolean shouldBounce = false;
 
+        if (minOverlap == overlapTop && ball.getDy() > 0) {
+            shouldBounce = true;
+            ball.reverseY();
+            ball.y = paddleTop - ball.getSize() - 5;
+        } else if (minOverlap == overlapBottom && ball.getDy() < 0) {
+            shouldBounce = true;
+            ball.reverseY();
+            ball.y = paddleBottom + 5;
+        } else if (minOverlap == overlapLeft && ball.getDx() > 0) {
+            shouldBounce = true;
+            ball.reverseX();
+            ball.x = paddleLeft - ball.getSize() - 5;
+        } else if (minOverlap == overlapRight && ball.getDx() < 0) {
+            shouldBounce = true;
+            ball.reverseX();
+            ball.x = paddleRight + 5;
+        }
+
+        // If no bounce is needed, update the ball position to the paddle
+        if (!shouldBounce) {
             if (minOverlap == overlapTop) {
-                // Hit from the top → bounce vertically
-                ball.reverseY();
-                ball.y = paddleTop - ball.getSize(); // Adjust position to stay above paddle
+                // Ball hit brick from top
+                ball.y = paddleTop - ball.getSize() - 5;
             } else if (minOverlap == overlapBottom) {
-                // Hit from below → bounce vertically
-                ball.reverseY();
-                ball.y = paddleBottom;
+                // Ball hit brick from bottom
+                ball.y = paddleBottom + 5;
             } else if (minOverlap == overlapLeft) {
-                // Hit from left side → bounce horizontally
-                ball.reverseX();
-                ball.x = paddleLeft - ball.getSize();
+                // Ball hit brick from left
+                ball.x = paddleLeft - ball.getSize() - 5;
             } else if (minOverlap == overlapRight) {
-                // Hit from right side → bounce horizontally
-                ball.reverseX();
-                ball.x = paddleRight;
+                // Ball hit brick from right
+                ball.x = paddleRight + 5;
             }
         }
     }
+
     /**
-     * Handles collision detection between the ball and all bricks.
-     * When a collision occurs, the brick is destroyed and the ball bounces back.
+     * Handles collision detection and response between the ball and a brick.
+     * Uses AABB collision detection with overlap resolution to determine bounce direction.
+     * Destroys the brick if collision occurs.
      *
      * @param ball the ball object
-     * @param normalBricks the list of all active bricks
+     * @param brick the brick object
      */
-    public static void handleBallBrickCollision(Ball ball, List<NormalBrick> normalBricks) {
-        for (NormalBrick b : normalBricks) {
-            if (!b.isDestroyed() &&
-                    ball.getX() + ball.getSize() >= b.x &&
-                    ball.getX() <= b.x + b.width &&
-                    ball.getY() + ball.getSize() >= b.y &&
-                    ball.getY() <= b.y + b.height) {
+    public static void handleBallBrickCollision(Ball ball, NormalBrick brick) {
+        if (brick.isDestroyed() || !isColliding(ball, brick)) {
+            return;
+        }
 
-                // Destroy the brick and make the ball bounce
-                b.destroy();
-                ball.reverseY();
-                break; // Stop checking after the first collision
-            }
+        // Calculate ball boundaries
+        double ballLeft = ball.getX();
+        double ballRight = ball.getX() + ball.getSize();
+        double ballTop = ball.getY();
+        double ballBottom = ball.getY() + ball.getSize();
+
+        // Calculate brick boundaries
+        double brickLeft = brick.x;
+        double brickRight = brick.x + brick.width;
+        double brickTop = brick.y;
+        double brickBottom = brick.y + brick.height;
+
+        // Calculate overlap on each side
+        double overlapLeft = ballRight - brickLeft;
+        double overlapRight = brickRight - ballLeft;
+        double overlapTop = ballBottom - brickTop;
+        double overlapBottom = brickBottom - ballTop;
+
+        // Find minimum overlap to determine collision direction
+        double minOverlap = Math.min(
+                Math.min(overlapLeft, overlapRight),
+                Math.min(overlapTop, overlapBottom)
+        );
+
+        // Determine collision direction and bounce accordingly
+        if (minOverlap == overlapTop) {
+            // Ball hit brick from top
+            ball.reverseY();
+            ball.y = brickTop - ball.getSize() - 1;
+        } else if (minOverlap == overlapBottom) {
+            // Ball hit brick from bottom
+            ball.reverseY();
+            ball.y = brickBottom + 1;
+        } else if (minOverlap == overlapLeft) {
+            // Ball hit brick from left
+            ball.reverseX();
+            ball.x = brickLeft - ball.getSize() - 1;
+        } else if (minOverlap == overlapRight) {
+            // Ball hit brick from right
+            ball.reverseX();
+            ball.x = brickRight + 1;
+        }
+
+        // Destroy the brick
+        brick.destroy();
+    }
+
+    /**
+     * Handles collision detection between the ball and the screen boundaries (walls).
+     * Bounces the ball when it hits the left, right, or top wall.
+     *
+     * @param ball the ball object
+     * @param screenWidth the width of the game screen
+     * @param screenHeight the height of the game screen (not used, but kept for consistency)
+     */
+    public static void handleBallWallCollision(Ball ball, int screenWidth, int screenHeight) {
+        // Left and right walls
+        if (ball.getX() <= 0 || ball.getX() + ball.getSize() >= screenWidth) {
+            ball.reverseX();
+        }
+        
+        // Top wall
+        if (ball.getY() <= 0) {
+            ball.reverseY();
         }
     }
 }

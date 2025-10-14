@@ -8,7 +8,7 @@ import javafx.scene.paint.Color;
  */
 public class Paddle extends GameObject {
     // The speed at which the paddle moves horizontally
-    private double speed = 8 ;
+    private double speed = 6 ;
 
     /**
      * Constructor initializes the paddle with position and size.

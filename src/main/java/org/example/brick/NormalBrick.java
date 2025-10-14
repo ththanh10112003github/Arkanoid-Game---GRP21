@@ -8,7 +8,6 @@ import org.example.GameObject;
  * Each brick can be destroyed when hit by the ball and will no longer be drawn afterward.
  */
 public class NormalBrick extends GameObject {
-    // Indicates whether the brick has been destroyed
     private boolean destroyed = false;
 
     /**

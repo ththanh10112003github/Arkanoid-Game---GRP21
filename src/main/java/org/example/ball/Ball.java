@@ -10,6 +10,8 @@ import org.example.GameObject;
 public class Ball extends GameObject {
     // Horizontal and vertical velocity components
     private double dx, dy;
+    // Store the base speed without power-up effects
+    private double baseSpeed;
 
     /**
      * Constructs a Ball object with a given position, size, and initial velocity.
@@ -21,9 +23,10 @@ public class Ball extends GameObject {
      */
     public Ball(double x, double y, double size, double dx, double dy) {
         super(x, y, size, size);
-        // The speed is reduced to make the movement slower and smoother
-        this.dx = dx * 0.5;
-        this.dy = dy * 0.5;
+        this.dx = dx;
+        this.dy = dy;
+        // Calculate and store the base speed
+        this.baseSpeed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
     }
 
     /**
@@ -36,18 +39,62 @@ public class Ball extends GameObject {
     }
 
     /**
-     * Reverses the ball’s horizontal direction (used for wall or paddle collisions).
+     * Scales the current speed by the given factor while preserving direction.
+     * Useful for power-ups like FastBall.
+     * @param factor multiplicative factor to scale velocity
+     */
+    public void scaleSpeed(double mult) {
+        dx *= mult;
+        dy *= mult;
+    }
+
+    /**
+     * Resets speed to base speed while preserving current direction.
+     * Used when power-up expires.
+     */
+    public void resetSpeed() {
+        // Calculate current speed (magnitude)
+        double currentSpeed = Math.sqrt(dx * dx + dy * dy);
+        
+        // Only reset if current speed is different from base speed
+        if (Math.abs(currentSpeed - baseSpeed) > 0.001) {
+            // Get current direction (unit vector)
+            double directionX = dx / currentSpeed;
+            double directionY = dy / currentSpeed;
+            
+            // Apply base speed to current direction
+            dx = directionX * baseSpeed;
+            dy = directionY * baseSpeed;
+        }
+    }
+
+    /**
+     * Sets new speed values and updates base speed.
+     * Used when ball is reset or recreated.
+     */
+    public void setSpeed(double newDx, double newDy) {
+        this.dx = newDx;
+        this.dy = newDy;
+        this.baseSpeed = Math.sqrt(newDx * newDx + newDy * newDy);
+    }
+
+    /**
+     * Reverses the ball’s horizontal direction.
      */
     public void reverseX() { dx *= -1; }
 
     /**
-     * Reverses the ball’s vertical direction (used for wall, paddle, or brick collisions).
+     * Reverses the ball’s vertical direction.
      */
     public void reverseY() { dy *= -1; }
 
     // Getter methods for position and size
     public double getX() { return x; }
     public double getY() { return y; }
+
+    public double getDx() { return dx; }
+    public double getDy() { return dy; }
+
     public double getSize() { return width; }
 
     /**
