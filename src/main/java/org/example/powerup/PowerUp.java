@@ -3,6 +3,7 @@ package org.example.powerup;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import org.example.GameObject;
+import org.example.Paddle;
 import org.example.ball.Ball;
 
 /**
@@ -13,7 +14,7 @@ import org.example.ball.Ball;
 public abstract class PowerUp extends GameObject {
     protected boolean collected = false;
     protected double fallSpeed = 1.0; // slow falling
-    protected double durationSeconds = 8.0; // default duration
+    protected double duration = 8.0; // default duration
 
     public PowerUp(double x, double y, double size) {
         super(x, y, size, size);
@@ -45,12 +46,25 @@ public abstract class PowerUp extends GameObject {
     public abstract void apply(Ball ball);
 
     /**
-     * Reverts the effect of this power-up from the ball.
+     * Applies the effect of this power-up to the paddle.
+     * Default implementation does nothing (for ball-only power-ups).
+     * @param paddle the paddle object
      */
-    public abstract void revert(Ball ball);
+    public void applyToPaddle(Paddle paddle) {
+        // Default: do nothing
+    }
 
-    public double getDurationSeconds() {
-        return durationSeconds;
+    /**
+     * Resets the power-up effects.
+     * FastBall: resets ball speed to original
+     * BiggerPaddle: resets paddle width to original
+     * @param ball the ball object
+     * @param paddle the paddle object
+     */
+    public abstract void reset(Ball ball, Paddle paddle);
+    
+    public double getDuration() {
+        return duration;
     }
 
     @Override

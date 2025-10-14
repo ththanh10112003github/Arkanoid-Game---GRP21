@@ -8,7 +8,9 @@ import javafx.scene.paint.Color;
  */
 public class Paddle extends GameObject {
     // The speed at which the paddle moves horizontally
-    private double speed = 6 ;
+    private double speed = 6;
+    // Store the base width without power-up effects
+    private double baseWidth;
 
     /**
      * Constructor initializes the paddle with position and size.
@@ -19,6 +21,7 @@ public class Paddle extends GameObject {
      */
     public Paddle(double x, double y, double width, double height) {
         super(x, y, width, height);
+        this.baseWidth = width;
     }
 
     /**
@@ -34,6 +37,22 @@ public class Paddle extends GameObject {
         // Prevent paddle from moving beyond the left and right edges of the screen
         if (x < 0) x = 0;
         if (x + width > 800) x = 800 - width;
+    }
+
+    /**
+     * Scales the paddle width by the given factor.
+     * Used for power-up BiggerPaddle.
+     * @param factor multiplicative factor to scale width
+     */
+    public void scaleWidth(double mult) {
+        width *= mult;
+    }
+
+    /**
+     * Resets width to base width (used when power-up expires).
+     */
+    public void resetWidth() {
+        width = baseWidth;
     }
 
     /**

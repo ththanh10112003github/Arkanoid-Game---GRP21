@@ -10,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.example.ball.Ball;
 import org.example.brick.NormalBrick;
+import org.example.powerup.BiggerPaddle;
 import org.example.powerup.FastBall;
 import org.example.powerup.PowerUp;
 
@@ -35,8 +36,9 @@ public class Game {
     private Canvas canvas;
     private List<PowerUp> powerUps = new ArrayList<>();
     private double powerUpDropRate = 1.0;
-    private String activePowerUpId = null;
-    private double activePowerUpRemainingSec = 0.0;
+    private double fastBallSpawnRate = 0.5;
+    private double biggerPaddleDurationRemaining = 0.0;
+    private double fastBallDurationRemaining = 0.0;
 
     // Input tracking
     private boolean leftPressed, rightPressed;
@@ -163,26 +165,45 @@ public class Game {
                 }
             }
         }
-        // Drop power-up if a brick was destroyed
+        // Drop power-up if a brick destroyed
         if (destroyed != null && Math.random() < powerUpDropRate) {
             double size = 18;
             double px = destroyed.x + destroyed.width / 2 - size / 2;
             double py = destroyed.y + destroyed.height / 2 - size / 2;
-            powerUps.add(new FastBall(px, py, size));
+            
+            // Spawn power-up based on spawn rates
+            double rand = Math.random();
+            if (rand < fastBallSpawnRate) {
+                powerUps.add(new FastBall(px, py, size));
+            } else {
+                powerUps.add(new BiggerPaddle(px, py, size));
+            }
         }
 
         // Check collision between paddle and power-ups
         for (PowerUp p : powerUps) {
             if (!p.isCollected() && CollisionManager.isColliding(p, paddle)) {
-                // Only apply effect if this power-up type is not already active
-                if (activePowerUpId == null || !activePowerUpId.equals(p.getId())) {
-                    p.apply(ball);
-                    activePowerUpId = p.getId();
-                    activePowerUpRemainingSec = p.getDurationSeconds();
-                } else {
-                    // Same power-up already active, just mark as collected without applying effect
+                String powerUpType = p.getId();
+                
+                if ("BiggerPaddle".equals(powerUpType)) {
+                    if (biggerPaddleDurationRemaining <= 0) {
+                        // Not active yet: apply effect
+                        p.applyToPaddle(paddle);
+                    }
+                    // Reset/refresh duration to 8s
+                    biggerPaddleDurationRemaining = p.getDuration();
+                    p.setCollected();
+                    
+                } else if ("FastBall".equals(powerUpType)) {
+                    if (fastBallDurationRemaining <= 0) {
+                        // Not active yet: apply effect
+                        p.apply(ball);
+                    }
+                    // Reset/refresh duration to 8s
+                    fastBallDurationRemaining = p.getDuration();
                     p.setCollected();
                 }
+                
                 break;  // Only collect one power-up per frame
             }
         }
@@ -198,16 +219,24 @@ public class Game {
             gameOver = true;
         }
 
-        // Handle active power-up timer (60fps; decrement with fixed timestep)
-        if (activePowerUpId != null) {
-            activePowerUpRemainingSec -= 1.0 / 60.0;
-            if (activePowerUpRemainingSec <= 0) {
-                // Revert by constructing a temporary instance to call revert logic
-                if ("FastBall".equals(activePowerUpId)) {
-                    new FastBall(0, 0, 0).revert(ball);
-                }
-                activePowerUpId = null;
-                activePowerUpRemainingSec = 0.0;
+        // Handle active power-up timers (60fps)
+        // Update BiggerPaddle timer
+        if (biggerPaddleDurationRemaining > 0) {
+            biggerPaddleDurationRemaining -= 1.0 / 60.0;
+            if (biggerPaddleDurationRemaining <= 0) {
+                // Reset paddle to normal size
+                new BiggerPaddle(0, 0, 0).reset(ball, paddle);
+                biggerPaddleDurationRemaining = 0.0;
+            }
+        }
+        
+        // Update FastBall timer
+        if (fastBallDurationRemaining > 0) {
+            fastBallDurationRemaining -= 1.0 / 60.0;
+            if (fastBallDurationRemaining <= 0) {
+                // Reset ball to normal speed
+                new FastBall(0, 0, 0).reset(ball, paddle);
+                fastBallDurationRemaining = 0.0;
             }
         }
     }
@@ -248,8 +277,8 @@ public class Game {
         ball = new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2);
         normalBricks = Level.createLevel1();
         powerUps.clear();
-        activePowerUpId = null;
-        activePowerUpRemainingSec = 0.0;
+        biggerPaddleDurationRemaining = 0.0;
+        fastBallDurationRemaining = 0.0;
         gameOver = false;
         leftPressed = false;
         rightPressed = false;
