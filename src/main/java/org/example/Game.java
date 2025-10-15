@@ -13,9 +13,11 @@ import org.example.brick.NormalBrick;
 import org.example.powerup.BiggerPaddle;
 import org.example.powerup.FastBall;
 import org.example.powerup.PowerUp;
+import org.example.powerup.TripleBallPowerUp;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Iterator;
 
 /**
  * This class manages the entire game lifecycle:
@@ -31,14 +33,16 @@ public class Game {
 
     // Core game objects
     private Paddle paddle;
-    private Ball ball;
+    private List<Ball> balls = new ArrayList<>();
     private List<NormalBrick> normalBricks;
     private Canvas canvas;
     private List<PowerUp> powerUps = new ArrayList<>();
     private double powerUpDropRate = 1.0;
-    private double fastBallSpawnRate = 0.5;
+    private double fastBallSpawnRate = 0.33;
+    private double tripleBallSpawnRate = 0.33;
     private double biggerPaddleDurationRemaining = 0.0;
     private double fastBallDurationRemaining = 0.0;
+
 
     // Input tracking
     private boolean leftPressed, rightPressed;
@@ -59,7 +63,7 @@ public class Game {
 
         // Initialize core game elements
         paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
-        ball = new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2);
+        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2));
         normalBricks = Level.createLevel1();
 
         // Create the scene and bind controls
@@ -139,42 +143,56 @@ public class Game {
         paddle.update(leftPressed, rightPressed);
 
         // Update ball position
-        ball.update();
+        for (Ball ball : balls) {
+            ball.update();
+        }
 
         // Update power-ups falling and handle pickup (Paddle collects)
         for (PowerUp p : powerUps) {
             p.update();
         }
-        
+
 
         // Check collision between ball and walls
-        CollisionManager.handleBallWallCollision(ball, WIDTH, HEIGHT);
-        
+        for (Ball ball : balls) {
+            CollisionManager.handleBallWallCollision(ball, WIDTH, HEIGHT);
+        }
+
         // Check collision between ball and paddle
-        CollisionManager.handleBallPaddleCollision(ball, paddle);
+        for (Ball ball : balls) {
+            CollisionManager.handleBallPaddleCollision(ball, paddle);
+        }
 
         // Check collision between ball and bricks
         NormalBrick destroyed = null;
-        for (NormalBrick b : normalBricks) {
-            if (!b.isDestroyed()) {
-                CollisionManager.handleBallBrickCollision(ball, b);
-                // Check if brick was destroyed by collision
-                if (b.isDestroyed()) {
-                    destroyed = b;
-                    break;
+        for (Ball ball : balls) {
+            for (NormalBrick b : normalBricks) {
+                if (!b.isDestroyed()) {
+                    CollisionManager.handleBallBrickCollision(ball, b);
+                    // Check if brick was destroyed by collision
+                    if (b.isDestroyed()) {
+                        destroyed = b;
+                        break;
+                    }
                 }
             }
+            if (destroyed != null) {
+                break;
+            }
         }
+
         // Drop power-up if a brick destroyed
         if (destroyed != null && Math.random() < powerUpDropRate) {
             double size = 18;
             double px = destroyed.x + destroyed.width / 2 - size / 2;
             double py = destroyed.y + destroyed.height / 2 - size / 2;
-            
+
             // Spawn power-up based on spawn rates
             double rand = Math.random();
             if (rand < fastBallSpawnRate) {
                 powerUps.add(new FastBall(px, py, size));
+            } else if (rand < fastBallSpawnRate + tripleBallSpawnRate) {
+                powerUps.add(new TripleBallPowerUp(px, py, size));
             } else {
                 powerUps.add(new BiggerPaddle(px, py, size));
             }
@@ -184,7 +202,7 @@ public class Game {
         for (PowerUp p : powerUps) {
             if (!p.isCollected() && CollisionManager.isColliding(p, paddle)) {
                 String powerUpType = p.getId();
-                
+
                 if ("BiggerPaddle".equals(powerUpType)) {
                     if (biggerPaddleDurationRemaining <= 0) {
                         // Not active yet: apply effect
@@ -193,24 +211,37 @@ public class Game {
                     // Reset/refresh duration to 8s
                     biggerPaddleDurationRemaining = p.getDuration();
                     p.setCollected();
-                    
+
                 } else if ("FastBall".equals(powerUpType)) {
                     if (fastBallDurationRemaining <= 0) {
                         // Not active yet: apply effect
-                        p.apply(ball);
+                        for (Ball ball : balls) {
+                            p.apply(ball);
+                        }
                     }
                     // Reset/refresh duration to 8s
                     fastBallDurationRemaining = p.getDuration();
                     p.setCollected();
+                } else if ("TripleBall".equals(powerUpType)) {
+                    ((TripleBallPowerUp) p).apply(balls);
+                    p.setCollected();
                 }
-                
+
                 break;  // Only collect one power-up per frame
             }
         }
         powerUps.removeIf(PowerUp::isCollected);
 
         // Game over if ball falls below the screen
-        if (ball.getY() > HEIGHT) {
+        Iterator<Ball> ballIterator = balls.iterator();
+        while (ballIterator.hasNext()) {
+            Ball ball = ballIterator.next();
+            if (ball.getY() > HEIGHT) {
+                ballIterator.remove();
+            }
+        }
+
+        if (balls.isEmpty()) {
             gameOver = true;
         }
 
@@ -225,17 +256,19 @@ public class Game {
             biggerPaddleDurationRemaining -= 1.0 / 60.0;
             if (biggerPaddleDurationRemaining <= 0) {
                 // Reset paddle to normal size
-                new BiggerPaddle(0, 0, 0).reset(ball, paddle);
+                new BiggerPaddle(0, 0, 0).reset(null, paddle);
                 biggerPaddleDurationRemaining = 0.0;
             }
         }
-        
+
         // Update FastBall timer
         if (fastBallDurationRemaining > 0) {
             fastBallDurationRemaining -= 1.0 / 60.0;
             if (fastBallDurationRemaining <= 0) {
                 // Reset ball to normal speed
-                new FastBall(0, 0, 0).reset(ball, paddle);
+                for (Ball ball : balls) {
+                    new FastBall(0, 0, 0).reset(ball, paddle);
+                }
                 fastBallDurationRemaining = 0.0;
             }
         }
@@ -253,7 +286,9 @@ public class Game {
 
         // Draw game objects
         paddle.draw(gc);
-        ball.draw(gc);
+        for (Ball ball : balls) {
+            ball.draw(gc);
+        }
         for (NormalBrick b : normalBricks) {
             b.draw(gc);
         }
@@ -274,7 +309,8 @@ public class Game {
      */
     private void restart() {
         paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
-        ball = new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2);
+        balls.clear();
+        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2));
         normalBricks = Level.createLevel1();
         powerUps.clear();
         biggerPaddleDurationRemaining = 0.0;
