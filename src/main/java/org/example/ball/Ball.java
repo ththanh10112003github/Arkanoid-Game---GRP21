@@ -24,7 +24,7 @@ public class Ball extends GameObject {
     }
 
     /**
-     * Scales the current speed by the given multilpier.
+     * Scales the current speed by the multilpier.
      */
     public void scaleSpeed(double mult) {
         dx *= mult;
@@ -38,7 +38,7 @@ public class Ball extends GameObject {
         double currentSpeed = Math.sqrt(dx * dx + dy * dy);
         
         if (Math.abs(currentSpeed - baseSpeed) > 0.001) {
-            // Get current direction (unit vector)
+            // Get current direction
             double directionX = dx / currentSpeed;
             double directionY = dy / currentSpeed;
             

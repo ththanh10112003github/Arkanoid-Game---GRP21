@@ -62,9 +62,4 @@ public abstract class Brick extends GameObject {
     }
 
     public abstract void draw(GraphicsContext gc);
-
-    public String getStatusInfo() {
-        return String.format("%s Brick - Hits: %d/%d - Points: %d", 
-                           brickType, currentHits, hitToBreak, points);
-    }
 }

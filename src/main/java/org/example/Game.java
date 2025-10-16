@@ -5,6 +5,7 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.KeyCode;
+import javafx.scene.image.Image;
 import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
@@ -12,16 +13,15 @@ import org.example.ball.Ball;
 import org.example.brick.Brick;
 import org.example.powerup.BiggerPaddle;
 import org.example.powerup.FastBall;
-import org.example.powerup.PowerUp;
 import org.example.powerup.TripleBallPowerUp;
+import org.example.powerup.PowerUp;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 /**
  * This class manages the entire game lifecycle:
- * - Initializes game objects
+ * - Initializes game objects (paddle, ball, bricks)
  * - Handles keyboard input
  * - Runs the update and render loop using AnimationTimer
  * - Detects collisions and manages game over/restart
@@ -33,22 +33,24 @@ public class Game {
 
     // Core game objects
     private Paddle paddle;
-    private List<Ball> balls = new ArrayList<>();
+    private List<Ball> balls;
     private List<Brick> bricks;
     private Canvas canvas;
     private List<PowerUp> powerUps = new ArrayList<>();
+    private ScoreManager scoreManager;
     private double powerUpDropRate = 1.0;
-    private double fastBallSpawnRate = 0.33;
-    private double tripleBallSpawnRate = 0.33;
+    private double fastBallSpawnRate = 0.4;
+    private double tripleBallSpawnRate = 0.3;
     private double biggerPaddleDurationRemaining = 0.0;
     private double fastBallDurationRemaining = 0.0;
-
-    // Input tracking
     private boolean leftPressed, rightPressed;
+
 
     // Game state
     private boolean gameOver = false;
-    private boolean gameWon = false;
+
+    Image heartImage;
+    Image heartEmptyImage;
     /**
      * Initializes the JavaFX scene, sets up the game, and starts the game loop.
      */
@@ -58,10 +60,22 @@ public class Game {
         GraphicsContext gc = canvas.getGraphicsContext2D();
         root.getChildren().add(canvas);
 
+        // Load heart images
+        try {
+            heartImage = new Image("file:assets/Heart.png");
+            heartEmptyImage = new Image("file:assets/Heart_empty.png");
+        } catch (Exception e) {
+            System.err.println("Could not load heart images: " + e.getMessage());
+            heartImage = null;
+            heartEmptyImage = null;
+        }
+
         // Initialize core game elements
         paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
-        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2));
+        balls = new ArrayList<>();
+        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
         bricks = Level.createLevel1();
+        scoreManager = new ScoreManager();
 
         // Create the scene and bind controls
         Scene scene = new Scene(root);
@@ -77,14 +91,14 @@ public class Game {
         stage.setScene(scene);
         stage.show();
 
-        // Ensure focus goes to input target when the window gains focus
+        // Ensure focus goes to our input target when the window gains focus
         root.requestFocus();
 
         // Main game loop using AnimationTimer
         new AnimationTimer() {
             @Override
             public void handle(long now) {
-                update(); 
+                update();
                 render(gc);
             }
         }.start();
@@ -100,7 +114,7 @@ public class Game {
             if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
             if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
 
-            if (e.getCode() == KeyCode.R && (gameOver || gameWon)) {
+            if (e.getCode() == KeyCode.R && gameOver) {
                 restart();
             }
         });
@@ -113,7 +127,7 @@ public class Game {
         canvas.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
             if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
-            if (e.getCode() == KeyCode.R && (gameOver || gameWon)) {
+            if (e.getCode() == KeyCode.R && gameOver) {
                 restart();
             }
         });
@@ -128,58 +142,50 @@ public class Game {
      * Updates all game objects each frame:
      * - Moves the paddle and ball
      * - Checks collisions between the ball, paddle, bricks, and walls
-     * - Updates the game state (if its game over or notnot)
+     * - Updates the game state (win/lose)
      */
     private void update() {
-        if (gameOver || gameWon) return;
+        if (gameOver) return;
 
-        // Move paddle based on user input
         paddle.update(leftPressed, rightPressed);
 
-        // Update ball position
         for (Ball ball : balls) {
             ball.update();
         }
 
-        // Update power-ups falling and handle pickup (Paddle collects)
         for (PowerUp p : powerUps) {
             p.update();
         }
+        
 
-        // Check collision between ball and walls
+        // Check collision for balls with walls and paddle
         for (Ball ball : balls) {
             CollisionManager.handleBallWallCollision(ball, WIDTH, HEIGHT);
-        }
-
-        // Check collision between ball and paddle
-        for (Ball ball : balls) {
+            
             CollisionManager.handleBallPaddleCollision(ball, paddle);
         }
 
-        // Check collision between ball and bricks
+        // Check collision between balls and bricks
         Brick destroyed = null;
-        for (Ball ball : balls) {
-            for (Brick b : bricks) {
-                if (!b.isDestroyed()) {
+        for (Brick b : bricks) {
+            if (!b.isDestroyed()) {
+                for (Ball ball : balls) {
                     CollisionManager.handleBallBrickCollision(ball, b);
-                    // Check if brick was destroyed by collision
                     if (b.isDestroyed()) {
                         destroyed = b;
+                        scoreManager.addScore(100);
                         break;
                     }
                 }
-            }
-            if (destroyed != null) {
-                break;
+                if (destroyed != null) break;
             }
         }
-
         // Drop power-up if a brick destroyed
         if (destroyed != null && Math.random() < powerUpDropRate) {
             double size = 18;
             double px = destroyed.x + destroyed.width / 2 - size / 2;
             double py = destroyed.y + destroyed.height / 2 - size / 2;
-
+            
             // Spawn power-up based on spawn rates
             double rand = Math.random();
             if (rand < fastBallSpawnRate) {
@@ -195,73 +201,68 @@ public class Game {
         for (PowerUp p : powerUps) {
             if (!p.isCollected() && CollisionManager.isColliding(p, paddle)) {
                 String powerUpType = p.getId();
-
+                
                 if ("BiggerPaddle".equals(powerUpType)) {
                     if (biggerPaddleDurationRemaining <= 0) {
-                        // If BiggerPaddle not active yet, apply effect
-                        ((BiggerPaddle) p).applyToPaddle(paddle);
+                        // If not active yet, applys effect
+                        ((BiggerPaddle)p).applyToPaddle(paddle);
                     }
-                    // Reset BiggerPaddle duration
+                    // Reset duration
                     biggerPaddleDurationRemaining = p.getDuration();
-                    p.setCollected();
-
+                    ((BiggerPaddle)p).setCollected();
+                    
                 } else if ("FastBall".equals(powerUpType)) {
                     if (fastBallDurationRemaining <= 0) {
-                        // If FastBall not active yet, apply effect
+                        // If not active yet, applys effect
                         for (Ball ball : balls) {
-                            ((FastBall) p).applyToBall(ball);
+                            ((FastBall)p).applyToBall(ball);
                         }
                     }
-                    // Reset FastBall duration
+                    // Reset duration
                     fastBallDurationRemaining = p.getDuration();
-                    p.setCollected();
+                    ((FastBall)p).setCollected();
                 } else if ("TripleBall".equals(powerUpType)) {
-                    ((TripleBallPowerUp) p).apply(balls);
-                    p.setCollected();
+                    // Apply triple ball effect
+                    ((TripleBallPowerUp)p).apply(balls);
+                    ((TripleBallPowerUp)p).setCollected();
                 }
-
+                
                 break;
             }
         }
         powerUps.removeIf(PowerUp::isCollected);
 
-        // Game over if ball falls below the screen
-        Iterator<Ball> ballIterator = balls.iterator();
-        while (ballIterator.hasNext()) {
-            Ball ball = ballIterator.next();
-            if (ball.getY() > HEIGHT) {
-                ballIterator.remove();
+        // Handle balls falling below screen - lose life, if no more lives, game over
+        balls.removeIf(ball -> ball.getY() > HEIGHT);
+        if (balls.isEmpty() && !gameOver) {
+            if (scoreManager.loseLife()) {
+                balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
+            } else {
+                gameOver = true;
             }
         }
 
-        if (balls.isEmpty()) {
+        // Game won if all bricks destroyed
+        if (bricks.stream().allMatch(Brick::isDestroyed)) {
             gameOver = true;
         }
 
-        // Game won if all bricks are destroyed
-        if (bricks.stream().allMatch(Brick::isDestroyed)) {
-            gameWon = true;
-        }
-
-        // Handle active power-up timers (60fps)
-        // Update BiggerPaddle timer
+        // Update BiggerPaddle duration
         if (biggerPaddleDurationRemaining > 0) {
             biggerPaddleDurationRemaining -= 1.0 / 60.0;
             if (biggerPaddleDurationRemaining <= 0) {
-                // Reset paddle to normal size
-                new BiggerPaddle(0, 0, 0).reset(null, paddle);
+                BiggerPaddle biggerPaddle = new BiggerPaddle(0, 0, 0);
+                biggerPaddle.reset(balls.get(0), paddle);
                 biggerPaddleDurationRemaining = 0.0;
             }
         }
-
-        // Update FastBall timer
+        
+        // Update FastBall duration
         if (fastBallDurationRemaining > 0) {
             fastBallDurationRemaining -= 1.0 / 60.0;
             if (fastBallDurationRemaining <= 0) {
-                // Reset ball to normal speed
-                for (Ball ball : balls) {
-                    new FastBall(0, 0, 0).reset(ball, paddle);
-                }
+                FastBall fastBall = new FastBall(0, 0, 0);
+                fastBall.reset(balls.get(0), paddle);
                 fastBallDurationRemaining = 0.0;
             }
         }
@@ -269,7 +270,6 @@ public class Game {
 
     /**
      * Renders the current frame to the screen.
-     * Clears the canvas, draws all game objects, and displays "Game Over" text if needed.
      */
     private void render(GraphicsContext gc) {
         gc.setFill(Color.BLACK);
@@ -287,33 +287,44 @@ public class Game {
             p.draw(gc);
         }
 
-        // Display Game Over text
+        // Display score and lives
+        gc.setFill(Color.WHITE);
+        gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
+        gc.fillText("Score: " + scoreManager.getScoreString(), 30, 30);
+        scoreManager.drawLives(gc, heartImage, heartEmptyImage, WIDTH / 2 - 50, 35);
+        gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH - 180, 30);
+
+        // Display Game Over
         if (gameOver) {
             gc.setFill(Color.WHITE);
-            gc.fillText("Game Over! Press R to Restart", WIDTH / 2 - 100, HEIGHT / 2);
-        }
-        
-        // Display Game Won text
-        if (gameWon) {
-            gc.setFill(Color.WHITE);
-            gc.fillText("YOU WIN! Press R to Restart", WIDTH / 2 - 100, HEIGHT / 2);
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 24));
+            
+            if (bricks.stream().allMatch(Brick::isDestroyed)) {
+                gc.fillText("YOU WIN! Press R to Restart", WIDTH / 2 - 170, HEIGHT / 2);
+            } else {
+                gc.fillText("Game Over! Press R to Restart", WIDTH / 2 - 180, HEIGHT / 2);
+            }
+            
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
+            gc.fillText("Final Score: " + scoreManager.getScoreString(), WIDTH / 2 - 80, HEIGHT / 2 + 30);
+            gc.fillText("High Score:  " + scoreManager.getHighScoreString(), WIDTH / 2 - 80, HEIGHT / 2 + 60);
         }
     }
 
     /**
      * Resets the game state and recreates paddle, ball, and bricks.
-     * Called when the player presses R after game over or game won.
+     * Called when the player presses R after game over.
      */
     private void restart() {
         paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
-        balls.clear();
-        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2));
+        balls = new ArrayList<>();
+        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
         bricks = Level.createLevel1();
+        scoreManager.reset();
         powerUps.clear();
         biggerPaddleDurationRemaining = 0.0;
         fastBallDurationRemaining = 0.0;
         gameOver = false;
-        gameWon = false;
         leftPressed = false;
         rightPressed = false;
         if (canvas != null) {

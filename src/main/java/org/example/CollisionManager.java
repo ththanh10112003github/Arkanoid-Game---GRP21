@@ -80,7 +80,7 @@ public class CollisionManager {
     /**
      * Handles collision detection and response between the ball and a brick.
      * Uses overlap resolution to determine bounce direction.
-     * Calls brick.hit() to handle brick damage.
+     * brick.hit() handles brick damage.
      */
     public static void handleBallBrickCollision(Ball ball, Brick brick) {
         if (brick.isDestroyed() || !isColliding(ball, brick)) {

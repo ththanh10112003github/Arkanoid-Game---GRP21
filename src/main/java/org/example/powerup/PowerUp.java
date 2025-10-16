@@ -36,7 +36,6 @@ public abstract class PowerUp extends GameObject {
         return duration;
     }
 
-    // Draws the power-up on the canvas
     @Override
     public void draw(GraphicsContext gc) {
         if (collected) return;

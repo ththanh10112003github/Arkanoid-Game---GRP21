@@ -6,7 +6,7 @@ import org.example.Paddle;
 import org.example.ball.Ball;
 
 /**
- * BiggerPaddle power-up: increases paddle width by x times for a limited time.
+ * BiggerPaddlePowerUp power-up: increases paddle width by x times for a limited time.
  */
 public class BiggerPaddle extends PowerUp {
     private static final double SIZE_MULTIPLIER = 1.5;
@@ -28,7 +28,6 @@ public class BiggerPaddle extends PowerUp {
 
     @Override
     public void reset(Ball ball, Paddle paddle) {
-        // Reset paddle width to original
         paddle.resetWidth();
     }
 

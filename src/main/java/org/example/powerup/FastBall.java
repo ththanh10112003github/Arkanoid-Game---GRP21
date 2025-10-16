@@ -28,7 +28,6 @@ public class FastBall extends PowerUp {
 
     @Override
     public void reset(Ball ball, Paddle paddle) {
-        // Reset ball speed to original
         ball.resetSpeed();
     }
 
