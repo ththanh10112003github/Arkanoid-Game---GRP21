@@ -22,11 +22,6 @@ public class TripleBallPowerUp extends PowerUp {
         return "TripleBall";
     }
 
-    @Override
-    public void apply(Ball ball) {
-        // Logic to add new balls will be in Game.java
-    }
-
     public void apply(List<Ball> balls) {
         if (collected) return;
 
@@ -55,7 +50,7 @@ public class TripleBallPowerUp extends PowerUp {
     @Override
     public void draw(GraphicsContext gc) {
         if (collected) return;
-        gc.setFill(Color.RED); // Choose a color for the power-up
+        gc.setFill(Color.RED);
         gc.fillOval(x, y, width, height);
         gc.setStroke(Color.WHITE);
         gc.strokeOval(x, y, width, height);

@@ -9,7 +9,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.example.ball.Ball;
-import org.example.brick.NormalBrick;
+import org.example.brick.Brick;
 import org.example.powerup.BiggerPaddle;
 import org.example.powerup.FastBall;
 import org.example.powerup.PowerUp;
@@ -21,7 +21,7 @@ import java.util.Iterator;
 
 /**
  * This class manages the entire game lifecycle:
- * - Initializes game objects (paddle, ball, bricks)
+ * - Initializes game objects
  * - Handles keyboard input
  * - Runs the update and render loop using AnimationTimer
  * - Detects collisions and manages game over/restart
@@ -34,7 +34,7 @@ public class Game {
     // Core game objects
     private Paddle paddle;
     private List<Ball> balls = new ArrayList<>();
-    private List<NormalBrick> normalBricks;
+    private List<Brick> bricks;
     private Canvas canvas;
     private List<PowerUp> powerUps = new ArrayList<>();
     private double powerUpDropRate = 1.0;
@@ -43,17 +43,14 @@ public class Game {
     private double biggerPaddleDurationRemaining = 0.0;
     private double fastBallDurationRemaining = 0.0;
 
-
     // Input tracking
     private boolean leftPressed, rightPressed;
 
-    // Game state flag
+    // Game state
     private boolean gameOver = false;
-
+    private boolean gameWon = false;
     /**
-     * Initializes the JavaFX scene, sets up the game, and starts the main loop.
-     *
-     * @param stage the JavaFX stage (main window) to render the game
+     * Initializes the JavaFX scene, sets up the game, and starts the game loop.
      */
     public void start(Stage stage) {
         Pane root = new Pane();
@@ -64,7 +61,7 @@ public class Game {
         // Initialize core game elements
         paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
         balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2));
-        normalBricks = Level.createLevel1();
+        bricks = Level.createLevel1();
 
         // Create the scene and bind controls
         Scene scene = new Scene(root);
@@ -80,15 +77,15 @@ public class Game {
         stage.setScene(scene);
         stage.show();
 
-        // Ensure focus goes to our input target when the window gains focus
+        // Ensure focus goes to input target when the window gains focus
         root.requestFocus();
 
         // Main game loop using AnimationTimer
         new AnimationTimer() {
             @Override
             public void handle(long now) {
-                update();    // Update object positions and check collisions
-                render(gc);  // Draw updated frame
+                update(); 
+                render(gc);
             }
         }.start();
     }
@@ -97,16 +94,13 @@ public class Game {
      * Configures keyboard input.
      * - LEFT/RIGHT or A/D move the paddle
      * - R restarts the game after game over
-     *
-     * @param scene the JavaFX Scene used to register input events
      */
     private void setupControls(Scene scene, Canvas canvas) {
         scene.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
             if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
 
-            // Restart the game when R is pressed after game over
-            if (e.getCode() == KeyCode.R && gameOver) {
+            if (e.getCode() == KeyCode.R && (gameOver || gameWon)) {
                 restart();
             }
         });
@@ -119,7 +113,7 @@ public class Game {
         canvas.setOnKeyPressed(e -> {
             if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
             if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
-            if (e.getCode() == KeyCode.R && gameOver) {
+            if (e.getCode() == KeyCode.R && (gameOver || gameWon)) {
                 restart();
             }
         });
@@ -134,10 +128,10 @@ public class Game {
      * Updates all game objects each frame:
      * - Moves the paddle and ball
      * - Checks collisions between the ball, paddle, bricks, and walls
-     * - Updates the game state (win/lose)
+     * - Updates the game state (if its game over or notnot)
      */
     private void update() {
-        if (gameOver) return;
+        if (gameOver || gameWon) return;
 
         // Move paddle based on user input
         paddle.update(leftPressed, rightPressed);
@@ -152,7 +146,6 @@ public class Game {
             p.update();
         }
 
-
         // Check collision between ball and walls
         for (Ball ball : balls) {
             CollisionManager.handleBallWallCollision(ball, WIDTH, HEIGHT);
@@ -164,9 +157,9 @@ public class Game {
         }
 
         // Check collision between ball and bricks
-        NormalBrick destroyed = null;
+        Brick destroyed = null;
         for (Ball ball : balls) {
-            for (NormalBrick b : normalBricks) {
+            for (Brick b : bricks) {
                 if (!b.isDestroyed()) {
                     CollisionManager.handleBallBrickCollision(ball, b);
                     // Check if brick was destroyed by collision
@@ -205,21 +198,21 @@ public class Game {
 
                 if ("BiggerPaddle".equals(powerUpType)) {
                     if (biggerPaddleDurationRemaining <= 0) {
-                        // Not active yet: apply effect
-                        p.applyToPaddle(paddle);
+                        // If BiggerPaddle not active yet, apply effect
+                        ((BiggerPaddle) p).applyToPaddle(paddle);
                     }
-                    // Reset/refresh duration to 8s
+                    // Reset BiggerPaddle duration
                     biggerPaddleDurationRemaining = p.getDuration();
                     p.setCollected();
 
                 } else if ("FastBall".equals(powerUpType)) {
                     if (fastBallDurationRemaining <= 0) {
-                        // Not active yet: apply effect
+                        // If FastBall not active yet, apply effect
                         for (Ball ball : balls) {
-                            p.apply(ball);
+                            ((FastBall) p).applyToBall(ball);
                         }
                     }
-                    // Reset/refresh duration to 8s
+                    // Reset FastBall duration
                     fastBallDurationRemaining = p.getDuration();
                     p.setCollected();
                 } else if ("TripleBall".equals(powerUpType)) {
@@ -227,7 +220,7 @@ public class Game {
                     p.setCollected();
                 }
 
-                break;  // Only collect one power-up per frame
+                break;
             }
         }
         powerUps.removeIf(PowerUp::isCollected);
@@ -246,8 +239,8 @@ public class Game {
         }
 
         // Game won if all bricks are destroyed
-        if (normalBricks.stream().allMatch(NormalBrick::isDestroyed)) {
-            gameOver = true;
+        if (bricks.stream().allMatch(Brick::isDestroyed)) {
+            gameWon = true;
         }
 
         // Handle active power-up timers (60fps)
@@ -277,8 +270,6 @@ public class Game {
     /**
      * Renders the current frame to the screen.
      * Clears the canvas, draws all game objects, and displays "Game Over" text if needed.
-     *
-     * @param gc the GraphicsContext used for drawing on the Canvas
      */
     private void render(GraphicsContext gc) {
         gc.setFill(Color.BLACK);
@@ -289,7 +280,7 @@ public class Game {
         for (Ball ball : balls) {
             ball.draw(gc);
         }
-        for (NormalBrick b : normalBricks) {
+        for (Brick b : bricks) {
             b.draw(gc);
         }
         for (PowerUp p : powerUps) {
@@ -301,21 +292,28 @@ public class Game {
             gc.setFill(Color.WHITE);
             gc.fillText("Game Over! Press R to Restart", WIDTH / 2 - 100, HEIGHT / 2);
         }
+        
+        // Display Game Won text
+        if (gameWon) {
+            gc.setFill(Color.WHITE);
+            gc.fillText("YOU WIN! Press R to Restart", WIDTH / 2 - 100, HEIGHT / 2);
+        }
     }
 
     /**
      * Resets the game state and recreates paddle, ball, and bricks.
-     * Called when the player presses R after game over.
+     * Called when the player presses R after game over or game won.
      */
     private void restart() {
         paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
         balls.clear();
         balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.2, 1.2));
-        normalBricks = Level.createLevel1();
+        bricks = Level.createLevel1();
         powerUps.clear();
         biggerPaddleDurationRemaining = 0.0;
         fastBallDurationRemaining = 0.0;
         gameOver = false;
+        gameWon = false;
         leftPressed = false;
         rightPressed = false;
         if (canvas != null) {
