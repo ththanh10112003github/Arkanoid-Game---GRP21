@@ -7,12 +7,12 @@ public class NormalBrick extends Brick {
 
     public NormalBrick(double x, double y, double width, double height) {
         super(x, y, width, height, "Normal", 100, 1);
-        this.brickColor = Color.ORANGE;
+        this.brickColor = Color.YELLOW;
     }
     
     public NormalBrick(double x, double y, double width, double height, int points) {
         super(x, y, width, height, "Normal", points, 1);
-        this.brickColor = Color.ORANGE;
+        this.brickColor = Color.YELLOW;
     }
 
    

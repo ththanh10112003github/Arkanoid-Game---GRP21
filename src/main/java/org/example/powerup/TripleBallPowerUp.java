@@ -23,24 +23,36 @@ public class TripleBallPowerUp extends PowerUp {
     }
 
     public void apply(List<Ball> balls) {
-        if (collected) return;
+        if (collected || balls.isEmpty()) return;
 
-        List<Ball> newBalls = new ArrayList<>();
-        for (Ball originalBall : balls) {
-            double originalX = originalBall.getX();
-            double originalY = originalBall.getY();
-            double speed = Math.sqrt(originalBall.getDx() * originalBall.getDx() + originalBall.getDy() * originalBall.getDy());
+        // Create two new balls from the position of the first ball in the list
+        Ball originalBall = balls.get(0);
+        double originalX = originalBall.getX();
+        double originalY = originalBall.getY();
+        double speed = Math.sqrt(originalBall.getDx() * originalBall.getDx() + originalBall.getDy() * originalBall.getDy());
 
-            for (int i = 0; i < 2; i++) {
-                double angle = random.nextDouble() * 2 * Math.PI;
-                double dx = speed * Math.cos(angle);
-                double dy = speed * Math.sin(angle);
-                newBalls.add(new Ball(originalX, originalY, originalBall.getSize(), dx, dy));
-            }
+        for (int i = 0; i < 2; i++) {
+            double angle = generateRandomAngle();
+            double dx = speed * Math.cos(angle);
+            double dy = speed * Math.sin(angle);
+            balls.add(new Ball(originalX, originalY, originalBall.getSize(), dx, dy));
         }
 
-        balls.addAll(newBalls);
         collected = true;
+    }
+
+    private double generateRandomAngle() {
+        double angleInDegrees;
+        double minAngle = 15.0;
+        double maxAngle = 165.0;
+
+        if (random.nextBoolean()) {
+            angleInDegrees = minAngle + random.nextDouble() * (maxAngle - minAngle);
+        } else {
+            angleInDegrees = (minAngle + 180) + random.nextDouble() * (maxAngle - minAngle);
+        }
+
+        return Math.toRadians(angleInDegrees);
     }
 
 

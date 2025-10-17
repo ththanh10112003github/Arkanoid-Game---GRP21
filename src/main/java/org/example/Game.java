@@ -232,7 +232,6 @@ public class Game {
         }
         powerUps.removeIf(PowerUp::isCollected);
 
-        // Handle balls falling below screen - lose life, if no more lives, game over
         balls.removeIf(ball -> ball.getY() > HEIGHT);
         if (balls.isEmpty() && !gameOver) {
             if (scoreManager.loseLife()) {
@@ -242,8 +241,7 @@ public class Game {
             }
         }
 
-        // Game won if all bricks destroyed
-        if (bricks.stream().allMatch(Brick::isDestroyed)) {
+        if (bricks.stream().filter(b -> !(b instanceof org.example.brick.UnbreakableBrick)).allMatch(Brick::isDestroyed)) {
             gameOver = true;
         }
 
