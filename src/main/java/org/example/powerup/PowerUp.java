@@ -10,6 +10,7 @@ public abstract class PowerUp extends GameObject {
     protected boolean collected = false;
     protected double fallSpeed = 1.0; // fall speed
     protected double duration = 8.0; // duration
+    protected String soundEffect;
 
     public PowerUp(double x, double y, double size) {
         super(x, y, size, size);
@@ -34,6 +35,10 @@ public abstract class PowerUp extends GameObject {
     
     public double getDuration() {
         return duration;
+    }
+
+    public String getSoundEffect() {
+        return soundEffect;
     }
 
     @Override

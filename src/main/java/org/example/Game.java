@@ -11,6 +11,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.example.ball.Ball;
 import org.example.brick.Brick;
+import org.example.brick.UnbreakableBrick;
 import org.example.powerup.BiggerPaddle;
 import org.example.powerup.FastBall;
 import org.example.powerup.TripleBallPowerUp;
@@ -38,6 +39,7 @@ public class Game {
     private Canvas canvas;
     private List<PowerUp> powerUps = new ArrayList<>();
     private ScoreManager scoreManager;
+    private SoundManager soundManager;
     private double powerUpDropRate = 1.0;
     private double fastBallSpawnRate = 0.4;
     private double tripleBallSpawnRate = 0.3;
@@ -71,11 +73,12 @@ public class Game {
         }
 
         // Initialize core game elements
-        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
+        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 500, 15);
         balls = new ArrayList<>();
         balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
         bricks = Level.createLevel1();
         scoreManager = new ScoreManager();
+        soundManager = SoundManager.oneAndOnly();
 
         // Create the scene and bind controls
         Scene scene = new Scene(root);
@@ -93,6 +96,8 @@ public class Game {
 
         // Ensure focus goes to our input target when the window gains focus
         root.requestFocus();
+
+        soundManager.playBackgroundMusic("main_theme");
 
         // Main game loop using AnimationTimer
         new AnimationTimer() {
@@ -141,8 +146,10 @@ public class Game {
     /**
      * Updates all game objects each frame:
      * - Moves the paddle and ball
-     * - Checks collisions between the ball, paddle, bricks, and walls
+     * - Updates the power-ups
+     * - Checks collisions between the ball, paddle, bricks, power-ups, and walls
      * - Updates the game state (win/lose)
+     * - Handles sound effects and background musics
      */
     private void update() {
         if (gameOver) return;
@@ -161,7 +168,6 @@ public class Game {
         // Check collision for balls with walls and paddle
         for (Ball ball : balls) {
             CollisionManager.handleBallWallCollision(ball, WIDTH, HEIGHT);
-            
             CollisionManager.handleBallPaddleCollision(ball, paddle);
         }
 
@@ -174,6 +180,7 @@ public class Game {
                     if (b.isDestroyed()) {
                         destroyed = b;
                         scoreManager.addScore(100);
+                        soundManager.playSoundEffect("brick_break");
                         break;
                     }
                 }
@@ -206,43 +213,55 @@ public class Game {
                     if (biggerPaddleDurationRemaining <= 0) {
                         // If not active yet, applys effect
                         ((BiggerPaddle)p).applyToPaddle(paddle);
+                        soundManager.playSoundEffect(p.getSoundEffect());
                     }
                     // Reset duration
                     biggerPaddleDurationRemaining = p.getDuration();
-                    ((BiggerPaddle)p).setCollected();
-                    
+                    p.setCollected();
                 } else if ("FastBall".equals(powerUpType)) {
                     if (fastBallDurationRemaining <= 0) {
-                        // If not active yet, applys effect
+                         // If not active yet, applys effect
                         for (Ball ball : balls) {
                             ((FastBall)p).applyToBall(ball);
                         }
+                        soundManager.playSoundEffect(p.getSoundEffect());
                     }
                     // Reset duration
                     fastBallDurationRemaining = p.getDuration();
-                    ((FastBall)p).setCollected();
+                    p.setCollected();
                 } else if ("TripleBall".equals(powerUpType)) {
                     // Apply triple ball effect
                     ((TripleBallPowerUp)p).apply(balls);
-                    ((TripleBallPowerUp)p).setCollected();
+                    p.setCollected();
+                    soundManager.playSoundEffect(p.getSoundEffect());
                 }
                 
                 break;
             }
         }
+
         powerUps.removeIf(PowerUp::isCollected);
 
+        // Handle balls falling below screen - if no balls, lose life, if no more lives, game over
         balls.removeIf(ball -> ball.getY() > HEIGHT);
         if (balls.isEmpty() && !gameOver) {
             if (scoreManager.loseLife()) {
+                soundManager.playSoundEffect("life_lost");
                 balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
             } else {
                 gameOver = true;
+                soundManager.pauseBackgroundMusic();
+                soundManager.stopAllSoundEffects();
+                soundManager.playSoundEffect("game_over");
             }
         }
 
-        if (bricks.stream().filter(b -> !(b instanceof org.example.brick.UnbreakableBrick)).allMatch(Brick::isDestroyed)) {
+        // Game won if all bricks destroyed except unbreakable bricks
+        if (bricks.stream().filter(b -> !(b instanceof UnbreakableBrick)).allMatch(Brick::isDestroyed)) {
             gameOver = true;
+            soundManager.pauseBackgroundMusic();
+            soundManager.stopAllSoundEffects();
+            soundManager.playSoundEffect("victory");
         }
 
         // Update BiggerPaddle duration
@@ -296,7 +315,7 @@ public class Game {
         if (gameOver) {
             gc.setFill(Color.WHITE);
             gc.setFont(javafx.scene.text.Font.font("Consolas", 24));
-            
+
             if (bricks.stream().allMatch(Brick::isDestroyed)) {
                 gc.fillText("YOU WIN! Press R to Restart", WIDTH / 2 - 170, HEIGHT / 2);
             } else {
@@ -314,7 +333,7 @@ public class Game {
      * Called when the player presses R after game over.
      */
     private void restart() {
-        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
+        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 500, 15);
         balls = new ArrayList<>();
         balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
         bricks = Level.createLevel1();
@@ -322,9 +341,11 @@ public class Game {
         powerUps.clear();
         biggerPaddleDurationRemaining = 0.0;
         fastBallDurationRemaining = 0.0;
+        soundManager.resumeBackgroundMusic();
         gameOver = false;
         leftPressed = false;
         rightPressed = false;
+    
         if (canvas != null) {
             canvas.requestFocus();
         }

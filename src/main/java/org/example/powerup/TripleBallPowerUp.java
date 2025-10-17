@@ -5,7 +5,6 @@ import javafx.scene.paint.Color;
 import org.example.Paddle;
 import org.example.ball.Ball;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
@@ -15,6 +14,7 @@ public class TripleBallPowerUp extends PowerUp {
 
     public TripleBallPowerUp(double x, double y, double size) {
         super(x, y, size);
+        this.soundEffect = "triple_ball";
     }
 
     @Override
@@ -54,7 +54,6 @@ public class TripleBallPowerUp extends PowerUp {
 
         return Math.toRadians(angleInDegrees);
     }
-
 
     @Override
     public void reset(Ball ball, Paddle paddle) {}

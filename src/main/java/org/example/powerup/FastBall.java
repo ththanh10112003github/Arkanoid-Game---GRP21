@@ -13,6 +13,7 @@ public class FastBall extends PowerUp {
 
     public FastBall(double x, double y, double size) {
         super(x, y, size);
+        this.soundEffect = "fast_ball";
     }
 
     @Override

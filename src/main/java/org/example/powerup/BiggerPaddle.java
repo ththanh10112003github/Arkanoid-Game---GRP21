@@ -13,6 +13,7 @@ public class BiggerPaddle extends PowerUp {
 
     public BiggerPaddle(double x, double y, double size) {
         super(x, y, size);
+        this.soundEffect = "bigger_paddle";
     }
 
     @Override
