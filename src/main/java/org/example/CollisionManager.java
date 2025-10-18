@@ -130,6 +130,12 @@ public class CollisionManager {
         );
 
         // Determine collision direction and bounce accordingly
+        if (ball.isBreakerMode()) {
+            // In breaker mode, destroy the brick instantly and keep moving straight
+            brick.destroy();
+            return;
+        }
+
         if (minOverlap == overlapTop) {
             // Ball hit brick from top
             ball.reverseY();
@@ -148,7 +154,7 @@ public class CollisionManager {
             ball.x = brickRight + 1;
         }
 
-        // Destroy the brick
+// Destroy the brick
         brick.destroy();
     }
 

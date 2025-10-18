@@ -3,6 +3,7 @@ package org.example.core;
 import javafx.application.Application;
 import javafx.stage.Stage;
 import org.example.Game;
+import org.example.MainMenu;
 
 /**
  * Main entry point of the game.
@@ -18,8 +19,7 @@ public class Main extends Application {
      */
     @Override
     public void start(Stage stage) {
-        Game game = new Game();
-        game.start(stage);
+        MainMenu.show(stage);
     }
 
     /**

@@ -12,6 +12,7 @@ public class Ball extends GameObject {
     private double dx, dy;
     // Store the base speed without power-up effects
     private double baseSpeed;
+    private boolean breakerMode = false;
 
     /**
      * Constructs a Ball object with a given position, size, and initial velocity.
@@ -41,7 +42,7 @@ public class Ball extends GameObject {
     /**
      * Scales the current speed by the given factor while preserving direction.
      * Useful for power-ups like FastBall.
-     * @param factor multiplicative factor to scale velocity
+     * @param mult multiplicative factor to scale velocity
      */
     public void scaleSpeed(double mult) {
         dx *= mult;
@@ -97,14 +98,27 @@ public class Ball extends GameObject {
 
     public double getSize() { return width; }
 
+    public void setBreakerMode(boolean breakerMode) {
+        this.breakerMode = breakerMode;
+    }
+
+    public boolean isBreakerMode() {
+        return breakerMode;
+    }
+
     /**
      * Draws the ball as a white circle on the canvas.
      * @param gc the GraphicsContext used for drawing
      */
     @Override
     public void draw(GraphicsContext gc) {
-        gc.setFill(Color.WHITE);
+        if (breakerMode) {
+            gc.setFill(Color.RED);  // Red for breaker mode
+        } else {
+            gc.setFill(Color.WHITE); // Normal mode
+        }
         gc.fillOval(x, y, width, height);
     }
+
 }
 

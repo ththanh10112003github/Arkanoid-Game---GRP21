@@ -11,6 +11,7 @@ import javafx.stage.Stage;
 import org.example.ball.Ball;
 import org.example.brick.NormalBrick;
 import org.example.powerup.BiggerPaddle;
+import org.example.powerup.BreakerBall;
 import org.example.powerup.FastBall;
 import org.example.powerup.PowerUp;
 
@@ -39,6 +40,10 @@ public class Game {
     private double fastBallSpawnRate = 0.5;
     private double biggerPaddleDurationRemaining = 0.0;
     private double fastBallDurationRemaining = 0.0;
+    private boolean isPaused = false;
+    private double breakerBallDurationRemaining = 0.0;
+
+
 
     // Input tracking
     private boolean leftPressed, rightPressed;
@@ -83,8 +88,13 @@ public class Game {
         new AnimationTimer() {
             @Override
             public void handle(long now) {
-                update();    // Update object positions and check collisions
-                render(gc);  // Draw updated frame
+                if (isPaused) {
+                    drawPauseOverlay(gc);
+                    return; // Skip update logic
+                }
+
+                update();
+                render(gc);
             }
         }.start();
     }
@@ -101,9 +111,19 @@ public class Game {
             if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
             if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
 
+            // Return to Main Menu when ESC is pressed
+            if (e.getCode() == KeyCode.ESCAPE) {
+                MainMenu.show((Stage) canvas.getScene().getWindow());
+            }
+
             // Restart the game when R is pressed after game over
             if (e.getCode() == KeyCode.R && gameOver) {
                 restart();
+            }
+
+            // Pause(UnPause) the game when P is pressed
+            if (e.getCode() == KeyCode.P) {
+                isPaused = !isPaused;
             }
         });
 
@@ -117,6 +137,16 @@ public class Game {
             if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
             if (e.getCode() == KeyCode.R && gameOver) {
                 restart();
+            }
+
+            // Return to Main Menu when ESC is pressed
+            if (e.getCode() == KeyCode.ESCAPE) {
+                MainMenu.show((Stage) canvas.getScene().getWindow());
+            }
+
+            // Pause(UnPause) the game when P is pressed
+            if (e.getCode() == KeyCode.P) {
+                isPaused = !isPaused;
             }
         });
 
@@ -170,13 +200,14 @@ public class Game {
             double size = 18;
             double px = destroyed.x + destroyed.width / 2 - size / 2;
             double py = destroyed.y + destroyed.height / 2 - size / 2;
-            
-            // Spawn power-up based on spawn rates
+
             double rand = Math.random();
-            if (rand < fastBallSpawnRate) {
+            if (rand < 0.33) {
                 powerUps.add(new FastBall(px, py, size));
-            } else {
+            } else if (rand < 0.66) {
                 powerUps.add(new BiggerPaddle(px, py, size));
+            } else {
+                powerUps.add(new BreakerBall(px, py, size));
             }
         }
 
@@ -184,27 +215,30 @@ public class Game {
         for (PowerUp p : powerUps) {
             if (!p.isCollected() && CollisionManager.isColliding(p, paddle)) {
                 String powerUpType = p.getId();
-                
+
                 if ("BiggerPaddle".equals(powerUpType)) {
                     if (biggerPaddleDurationRemaining <= 0) {
-                        // Not active yet: apply effect
                         p.applyToPaddle(paddle);
                     }
-                    // Reset/refresh duration to 8s
                     biggerPaddleDurationRemaining = p.getDuration();
                     p.setCollected();
-                    
+
                 } else if ("FastBall".equals(powerUpType)) {
                     if (fastBallDurationRemaining <= 0) {
-                        // Not active yet: apply effect
                         p.apply(ball);
                     }
-                    // Reset/refresh duration to 8s
                     fastBallDurationRemaining = p.getDuration();
                     p.setCollected();
+
+                } else if ("breakerBall".equals(powerUpType)) {
+                    if (breakerBallDurationRemaining <= 0) {
+                        p.apply(ball);
+                    }
+                    breakerBallDurationRemaining = p.getDuration();
+                    p.setCollected();
                 }
-                
-                break;  // Only collect one power-up per frame
+
+                break;
             }
         }
         powerUps.removeIf(PowerUp::isCollected);
@@ -239,6 +273,15 @@ public class Game {
                 fastBallDurationRemaining = 0.0;
             }
         }
+
+        // Update BreakerBall timer
+        if (breakerBallDurationRemaining > 0) {
+            breakerBallDurationRemaining -= 1.0 / 60.0;
+            if (breakerBallDurationRemaining <= 0) {
+                new BreakerBall(0, 0, 0).reset(ball, paddle);
+                breakerBallDurationRemaining = 0.0;
+            }
+        }
     }
 
     /**
@@ -264,8 +307,32 @@ public class Game {
         // Display Game Over text
         if (gameOver) {
             gc.setFill(Color.WHITE);
-            gc.fillText("Game Over! Press R to Restart", WIDTH / 2 - 100, HEIGHT / 2);
+            gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 28));
+            gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+            gc.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2 - 10);
+
+            gc.setFont(javafx.scene.text.Font.font("Arial", 18));
+            gc.fillText("Press R to Restart", WIDTH / 2, HEIGHT / 2 + 25);
+            gc.fillText("Press ESC to Return to Main Menu", WIDTH / 2, HEIGHT / 2 + 55);
         }
+    }
+
+    /**
+     * Draw an overlay when the game is pause
+     * Called when the player presses P .
+     */
+    private void drawPauseOverlay(GraphicsContext gc) {
+        gc.setFill(Color.rgb(0, 0, 0, 0.5)); // translucent dark overlay
+        gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        gc.setFill(Color.WHITE);
+        gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 32));
+        gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+        gc.fillText("PAUSED", canvas.getWidth() / 2, canvas.getHeight() / 2 - 20);
+
+        gc.setFont(javafx.scene.text.Font.font("Arial", 18));
+        gc.fillText("Press P to Resume", canvas.getWidth() / 2, canvas.getHeight() / 2 + 20);
+        gc.fillText("Press ESC to Return to Main Menu", canvas.getWidth() / 2, canvas.getHeight() / 2 + 50);
     }
 
     /**
