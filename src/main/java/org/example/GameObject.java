@@ -13,6 +13,5 @@ public abstract class GameObject {
         this.height = height;
     }
 
-    // Abstract method to draw the game object
     public abstract void draw(GraphicsContext gc);
 }

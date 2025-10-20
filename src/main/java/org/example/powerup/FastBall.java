@@ -6,14 +6,14 @@ import org.example.Paddle;
 import org.example.ball.Ball;
 
 /**
- * FastBall power-up: increases ball speed multiplier from 0.3 baseline to 0.5 equivalent.
- * Implementation: multiply current velocity by (0.5 / 0.3) ≈ 1.6667 once when collected.
+ * FastBall power-up: increases ball speed by x times for a limited time.
  */
 public class FastBall extends PowerUp {
-    private static final double TARGET_MULTIPLIER = 1.8;
+    private static final double SPEED_MULTIPLIER = 1.8;
 
     public FastBall(double x, double y, double size) {
         super(x, y, size);
+        this.soundEffect = "fast_ball";
     }
 
     @Override
@@ -21,16 +21,14 @@ public class FastBall extends PowerUp {
         return "FastBall";
     }
 
-    @Override
-    public void apply(Ball ball) {
+    public void applyToBall(Ball ball) {
         if (collected) return;
-        ball.scaleSpeed(TARGET_MULTIPLIER);
+        ball.scaleSpeed(SPEED_MULTIPLIER);
         collected = true;
     }
 
     @Override
     public void reset(Ball ball, Paddle paddle) {
-        // Reset ball speed to original
         ball.resetSpeed();
     }
 

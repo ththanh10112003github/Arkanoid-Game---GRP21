@@ -6,13 +6,14 @@ import org.example.Paddle;
 import org.example.ball.Ball;
 
 /**
- * BiggerPaddle power-up: increases paddle width by 1.5x for a limited time.
+ * BiggerPaddlePowerUp power-up: increases paddle width by x times for a limited time.
  */
 public class BiggerPaddle extends PowerUp {
     private static final double SIZE_MULTIPLIER = 1.5;
 
     public BiggerPaddle(double x, double y, double size) {
         super(x, y, size);
+        this.soundEffect = "bigger_paddle";
     }
 
     @Override
@@ -20,12 +21,6 @@ public class BiggerPaddle extends PowerUp {
         return "BiggerPaddle";
     }
 
-    @Override
-    public void apply(Ball ball) {
-        // BiggerPaddle doesn't affect the ball, do nothing
-    }
-
-    @Override
     public void applyToPaddle(Paddle paddle) {
         if (collected) return;
         paddle.scaleWidth(SIZE_MULTIPLIER);
@@ -34,7 +29,6 @@ public class BiggerPaddle extends PowerUp {
 
     @Override
     public void reset(Ball ball, Paddle paddle) {
-        // Reset paddle width to original
         paddle.resetWidth();
     }
 

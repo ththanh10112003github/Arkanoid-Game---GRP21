@@ -11,6 +11,11 @@ target/
 *.iws
 *.iml
 *.ipr
+mvnw
+mvnw.cmd
+target
+.mvn
+Arkanoid-Game---GRP21.iml
 
 ### Eclipse ###
 .apt_generated

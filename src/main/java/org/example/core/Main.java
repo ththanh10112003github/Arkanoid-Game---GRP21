@@ -8,14 +8,12 @@ import org.example.MainMenu;
 /**
  * Main entry point of the game.
  * This class initializes the JavaFX environment and launches the Game instance.
- * It extends the JavaFX Application class, as required for all JavaFX programs.
  */
 public class Main extends Application {
 
     /**
-     * Called automatically when the JavaFX application starts.
+     * Called when JavaFX starts.
      * Initializes and starts the Game on the provided Stage.
-     * @param stage the primary window of the application
      */
     @Override
     public void start(Stage stage) {
@@ -23,7 +21,7 @@ public class Main extends Application {
     }
 
     /**
-     * Launches the JavaFX application.
+     * Launches JavaFX.
      */
     public static void main(String[] args) {
         launch(args);
