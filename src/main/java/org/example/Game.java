@@ -135,6 +135,7 @@ public class Game {
             // Return to Main Menu when ESC is pressed
             if (e.getCode() == KeyCode.ESCAPE) {
                 stopGame();
+                soundManager.oneAndOnly().stopAllSounds();
                 MainMenu.show((Stage) canvas.getScene().getWindow());
             }
 
@@ -171,6 +172,7 @@ public class Game {
             // Return to Main Menu when ESC is pressed
             if (e.getCode() == KeyCode.ESCAPE) {
                 stopGame();
+                soundManager.oneAndOnly().stopAllSounds();
                 MainMenu.show((Stage) canvas.getScene().getWindow());
             }
 
@@ -315,7 +317,7 @@ public class Game {
                 balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
             } else {
                 gameOver = true;
-                soundManager.pauseBackgroundMusic();
+                soundManager.oneAndOnly().stopAllSounds();
                 soundManager.stopAllSoundEffects();
                 soundManager.playSoundEffect("game_over");
             }
