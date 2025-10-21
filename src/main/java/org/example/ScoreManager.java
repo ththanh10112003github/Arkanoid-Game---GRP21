@@ -75,14 +75,14 @@ public class ScoreManager {
      * Draws the lives display using heart images.
      */
     public void drawLives(GraphicsContext gc, Image heartImage, Image heartEmptyImage, int x, int y) {
-
         double heartSize = 24;
         double spacing = 30;
-        
+
+        // Draw hearts starting at (x, y), aligned with text baseline = TOP
         for (int i = 0; i < 3; i++) {
             double heartX = x + i * spacing;
-            double heartY = y - heartSize;
-            
+            double heartY = y; // aligned to top instead of subtracting heartSize
+
             if (i < lives) {
                 if (heartImage != null) {
                     gc.drawImage(heartImage, heartX, heartY, heartSize, heartSize);

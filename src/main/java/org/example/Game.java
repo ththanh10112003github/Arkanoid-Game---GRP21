@@ -48,7 +48,7 @@ public class Game {
     private double fastBallDurationRemaining = 0.0;
     private boolean isPaused = false;
     private double breakerBallDurationRemaining = 0.0;
-
+    private AnimationTimer gameLoop;
 
     // Input tracking
     private boolean leftPressed, rightPressed;
@@ -107,18 +107,19 @@ public class Game {
         soundManager.playBackgroundMusic("main_theme");
 
         // Main game loop using AnimationTimer
-        new AnimationTimer() {
+        gameLoop = new AnimationTimer() {
             @Override
             public void handle(long now) {
                 if (isPaused) {
                     drawPauseOverlay(gc);
-                    return; // Skip update logic
+                    return;
                 }
 
                 update();
                 render(gc);
             }
-        }.start();
+        };
+        gameLoop.start();
     }
 
     /**
@@ -133,6 +134,7 @@ public class Game {
 
             // Return to Main Menu when ESC is pressed
             if (e.getCode() == KeyCode.ESCAPE) {
+                stopGame();
                 MainMenu.show((Stage) canvas.getScene().getWindow());
             }
 
@@ -142,7 +144,15 @@ public class Game {
 
             // Pause(UnPause) the game when P is pressed
             if (e.getCode() == KeyCode.P) {
-                isPaused = !isPaused;
+                if (isPaused) {
+                    // Resume game
+                    isPaused = false;
+                    soundManager.resumeBackgroundMusic();
+                } else {
+                    // Pause game
+                    isPaused = true;
+                    soundManager.pauseBackgroundMusic();
+                }
             }
         });
 
@@ -160,12 +170,21 @@ public class Game {
 
             // Return to Main Menu when ESC is pressed
             if (e.getCode() == KeyCode.ESCAPE) {
+                stopGame();
                 MainMenu.show((Stage) canvas.getScene().getWindow());
             }
 
             // Pause(UnPause) the game when P is pressed
             if (e.getCode() == KeyCode.P) {
-                isPaused = !isPaused;
+                if (isPaused) {
+                    // Resume game
+                    isPaused = false;
+                    soundManager.resumeBackgroundMusic();
+                } else {
+                    // Pause game
+                    isPaused = true;
+                    soundManager.pauseBackgroundMusic();
+                }
             }
         });
 
@@ -339,12 +358,17 @@ public class Game {
                 breakerBallDurationRemaining = 0.0;
             }
         }
-    } // <-- this closes update()
+    }
 
     /**
      * Renders the current frame to the screen.
      */
     private void render(GraphicsContext gc) {
+        // Reset any transform / state from previous frames or operations
+        gc.setTransform(1, 0, 0, 1, 0, 0);
+        gc.clearRect(0, 0, WIDTH, HEIGHT);
+
+        // Draw background
         gc.setFill(Color.BLACK);
         gc.fillRect(0, 0, WIDTH, HEIGHT);
 
@@ -354,17 +378,24 @@ public class Game {
         for (Brick b : bricks) b.draw(gc);
         for (PowerUp p : powerUps) p.draw(gc);
 
-        // Display score and lives
+        // Display score and lives (explicit alignment & baseline)
         gc.setFill(Color.WHITE);
         gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
-        gc.fillText("Score: " + scoreManager.getScoreString(), 30, 30);
-        scoreManager.drawLives(gc, heartImage, heartEmptyImage, WIDTH / 2 - 50, 35);
-        gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH - 180, 30);
+        // ensure consistent baseline and alignment
+        gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
+        gc.setTextBaseline(javafx.geometry.VPos.TOP);
+
+        gc.fillText("Score: " + scoreManager.getScoreString(), 30, 10);
+        // drawLives probably draws images at given x,y; keep same coords but anchored near top center
+        scoreManager.drawLives(gc, heartImage, heartEmptyImage, WIDTH / 2 - 50, 8);
+        gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH - 180, 10);
 
         // Display Game Over / Win overlay
         if (gameOver) {
+            // Make sure overlay text is centered
             gc.setFill(Color.WHITE);
             gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+            gc.setTextBaseline(javafx.geometry.VPos.CENTER);
 
             boolean allBricksDestroyed = bricks.stream()
                     .filter(b -> !(b instanceof UnbreakableBrick))
@@ -390,11 +421,15 @@ public class Game {
      * Called when the player presses P.
      */
     private void drawPauseOverlay(GraphicsContext gc) {
+        // Reset transform/state to ensure overlay is drawn in the right place
+        gc.setTransform(1, 0, 0, 1, 0, 0);
+
         gc.setFill(Color.rgb(0, 0, 0, 0.5));
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         gc.setFill(Color.WHITE);
         gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+        gc.setTextBaseline(javafx.geometry.VPos.CENTER);
         gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 32));
         gc.fillText("PAUSED", canvas.getWidth() / 2, canvas.getHeight() / 2 - 20);
 
@@ -430,4 +465,16 @@ public class Game {
             canvas.requestFocus();
         }
     }
+
+    /**
+     * Stops the game loop and music when leaving the game.
+     */
+    public void stopGame() {
+        if (gameLoop != null) {
+            gameLoop.stop();  // Stop AnimationTimer
+        }
+        soundManager.pauseBackgroundMusic(); // Stop background music
+        soundManager.stopAllSoundEffects();  // Stop any active sound effects
+    }
+
 }
