@@ -7,6 +7,7 @@ import org.example.GameObject;
 public class Ball extends GameObject {
     private double dx, dy;
     private double baseSpeed;
+    private boolean breakerMode = false;
 
     /**
      * Constructs a Ball object with a given position, size, and initial velocity.

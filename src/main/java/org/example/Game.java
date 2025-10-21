@@ -41,14 +41,13 @@ public class Game {
     private List<PowerUp> powerUps = new ArrayList<>();
     private ScoreManager scoreManager;
     private SoundManager soundManager;
-    private double powerUpDropRate = 1.0;
+    private double powerUpDropRate = 0.4;
     private double fastBallSpawnRate = 0.4;
     private double tripleBallSpawnRate = 0.3;
     private double biggerPaddleDurationRemaining = 0.0;
     private double fastBallDurationRemaining = 0.0;
     private boolean isPaused = false;
     private double breakerBallDurationRemaining = 0.0;
-
 
 
     // Input tracking
@@ -60,6 +59,7 @@ public class Game {
 
     Image heartImage;
     Image heartEmptyImage;
+
     /**
      * Initializes the JavaFX scene, sets up the game, and starts the game loop.
      */
@@ -80,7 +80,7 @@ public class Game {
         }
 
         // Initialize core game elements
-        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 500, 15);
+        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
         balls = new ArrayList<>();
         balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
         bricks = Level.createLevel1();
@@ -195,7 +195,7 @@ public class Game {
         for (PowerUp p : powerUps) {
             p.update();
         }
-        
+
 
         // Check collision for balls with walls and paddle
         for (Ball ball : balls) {
@@ -219,73 +219,76 @@ public class Game {
                 if (destroyed != null) break;
             }
         }
-        // Drop power-up if a brick destroyed
+        // Drop power-up if a brick is destroyed
         if (destroyed != null && Math.random() < powerUpDropRate) {
             double size = 18;
             double px = destroyed.x + destroyed.width / 2 - size / 2;
             double py = destroyed.y + destroyed.height / 2 - size / 2;
 
             double rand = Math.random();
-            if (rand < 0.33) {
+            if (rand < 0.25) {
                 powerUps.add(new FastBall(px, py, size));
-            } else if (rand < fastBallSpawnRate + tripleBallSpawnRate) {
+            } else if (rand < 0.5) {
                 powerUps.add(new TripleBallPowerUp(px, py, size));
-            } else if (rand < 0.66) {
+            } else if (rand < 0.75) {
                 powerUps.add(new BiggerPaddle(px, py, size));
             } else {
                 powerUps.add(new BreakerBall(px, py, size));
             }
         }
 
-        // Check collision between paddle and power-ups
+// Check collision between paddle and power-ups
         for (PowerUp p : powerUps) {
             if (!p.isCollected() && CollisionManager.isColliding(p, paddle)) {
                 String powerUpType = p.getId();
 
-                if ("BiggerPaddle".equals(powerUpType)) {
-                    if (biggerPaddleDurationRemaining <= 0) {
-                        // If not active yet, applys effect
-                        ((BiggerPaddle)p).applyToPaddle(paddle);
-                        soundManager.playSoundEffect(p.getSoundEffect());
-                    }
-                    // Reset duration
-                    biggerPaddleDurationRemaining = p.getDuration();
-                    p.setCollected();
-                } else if ("FastBall".equals(powerUpType)) {
-                    if (fastBallDurationRemaining <= 0) {
-                         // If not active yet, applys effect
-                        for (Ball ball : balls) {
-                            ((FastBall)p).applyToBall(ball);
+                switch (powerUpType) {
+                    case "BiggerPaddle":
+                        if (biggerPaddleDurationRemaining <= 0) {
+                            ((BiggerPaddle) p).applyToPaddle(paddle);
+                            soundManager.playSoundEffect(p.getSoundEffect());
                         }
+                        biggerPaddleDurationRemaining = p.getDuration();
+                        p.setCollected();
+                        break;
+
+                    case "FastBall":
+                        if (fastBallDurationRemaining <= 0) {
+                            for (Ball ball : balls) {
+                                ((FastBall) p).applyToBall(ball);
+                            }
+                            soundManager.playSoundEffect(p.getSoundEffect());
+                        }
+                        fastBallDurationRemaining = p.getDuration();
+                        p.setCollected();
+                        break;
+
+                    case "TripleBall":
+                        ((TripleBallPowerUp) p).apply(balls);
                         soundManager.playSoundEffect(p.getSoundEffect());
-                    }
-                    // Reset duration
-                    fastBallDurationRemaining = p.getDuration();
-                    p.setCollected();
-                } else if ("TripleBall".equals(powerUpType)) {
-                    // Apply triple ball effect
-                    ((TripleBallPowerUp)p).apply(balls);
-                    p.setCollected();
-                    soundManager.playSoundEffect(p.getSoundEffect());
-                }
-                
-                break;
+                        p.setCollected();
+                        break;
 
-                } else if ("breakerBall".equals(powerUpType)) {
-                    if (breakerBallDurationRemaining <= 0) {
-                        p.apply(ball);
-                    }
-                    breakerBallDurationRemaining = p.getDuration();
-                    p.setCollected();
+                    case "BreakerBall":
+                        if (breakerBallDurationRemaining <= 0) {
+                            for (Ball ball : balls) {
+                                ((BreakerBall) p).applyToBall(ball);
+                            }
+                            soundManager.playSoundEffect(p.getSoundEffect());
+                        }
+                        breakerBallDurationRemaining = p.getDuration();
+                        p.setCollected();
+                        break;
                 }
 
-                break;
+                break; // Only handle one per frame
             }
         }
 
+// Remove collected power-ups
         powerUps.removeIf(PowerUp::isCollected);
 
-        // Handle balls falling below screen - if no balls, lose life, if no more lives, game over
+// Handle balls falling below screen
         balls.removeIf(ball -> ball.getY() > HEIGHT);
         if (balls.isEmpty() && !gameOver) {
             if (scoreManager.loseLife()) {
@@ -299,7 +302,7 @@ public class Game {
             }
         }
 
-        // Game won if all bricks destroyed except unbreakable bricks
+// Check win condition (all breakable bricks destroyed)
         if (bricks.stream().filter(b -> !(b instanceof UnbreakableBrick)).allMatch(Brick::isDestroyed)) {
             gameOver = true;
             soundManager.pauseBackgroundMusic();
@@ -307,35 +310,36 @@ public class Game {
             soundManager.playSoundEffect("victory");
         }
 
-        // Update BiggerPaddle duration
+// === Timers and duration handling ===
+        double delta = 1.0 / 60.0; // assuming 60 FPS
+
+// Bigger Paddle timer
         if (biggerPaddleDurationRemaining > 0) {
-            biggerPaddleDurationRemaining -= 1.0 / 60.0;
-            if (biggerPaddleDurationRemaining <= 0) {
-                BiggerPaddle biggerPaddle = new BiggerPaddle(0, 0, 0);
-                biggerPaddle.reset(balls.get(0), paddle);
+            biggerPaddleDurationRemaining -= delta;
+            if (biggerPaddleDurationRemaining <= 0 && !balls.isEmpty()) {
+                new BiggerPaddle(0, 0, 0).reset(balls.get(0), paddle);
                 biggerPaddleDurationRemaining = 0.0;
             }
         }
-        
-        // Update FastBall duration
+
+// Fast Ball timer
         if (fastBallDurationRemaining > 0) {
-            fastBallDurationRemaining -= 1.0 / 60.0;
-            if (fastBallDurationRemaining <= 0) {
-                FastBall fastBall = new FastBall(0, 0, 0);
-                fastBall.reset(balls.get(0), paddle);
+            fastBallDurationRemaining -= delta;
+            if (fastBallDurationRemaining <= 0 && !balls.isEmpty()) {
+                new FastBall(0, 0, 0).reset(balls.get(0), paddle);
                 fastBallDurationRemaining = 0.0;
             }
         }
 
-        // Update BreakerBall timer
+// Breaker Ball timer
         if (breakerBallDurationRemaining > 0) {
-            breakerBallDurationRemaining -= 1.0 / 60.0;
-            if (breakerBallDurationRemaining <= 0) {
-                new BreakerBall(0, 0, 0).reset(ball, paddle);
+            breakerBallDurationRemaining -= delta;
+            if (breakerBallDurationRemaining <= 0 && !balls.isEmpty()) {
+                new BreakerBall(0, 0, 0).reset(balls.get(0), paddle);
                 breakerBallDurationRemaining = 0.0;
             }
         }
-    }
+    } // <-- this closes update()
 
     /**
      * Renders the current frame to the screen.
@@ -346,15 +350,9 @@ public class Game {
 
         // Draw game objects
         paddle.draw(gc);
-        for (Ball ball : balls) {
-            ball.draw(gc);
-        }
-        for (Brick b : bricks) {
-            b.draw(gc);
-        }
-        for (PowerUp p : powerUps) {
-            p.draw(gc);
-        }
+        for (Ball ball : balls) ball.draw(gc);
+        for (Brick b : bricks) b.draw(gc);
+        for (PowerUp p : powerUps) p.draw(gc);
 
         // Display score and lives
         gc.setFill(Color.WHITE);
@@ -363,41 +361,41 @@ public class Game {
         scoreManager.drawLives(gc, heartImage, heartEmptyImage, WIDTH / 2 - 50, 35);
         gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH - 180, 30);
 
-        // Display Game Over
+        // Display Game Over / Win overlay
         if (gameOver) {
             gc.setFill(Color.WHITE);
-            gc.setFont(javafx.scene.text.Font.font("Consolas", 24));
-
-            if (bricks.stream().allMatch(Brick::isDestroyed)) {
-                gc.fillText("YOU WIN! Press R to Restart", WIDTH / 2 - 170, HEIGHT / 2);
-            } else {
-                gc.fillText("Game Over! Press R to Restart", WIDTH / 2 - 180, HEIGHT / 2);
-            }
-            
-            gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
-            gc.fillText("Final Score: " + scoreManager.getScoreString(), WIDTH / 2 - 80, HEIGHT / 2 + 30);
-            gc.fillText("High Score:  " + scoreManager.getHighScoreString(), WIDTH / 2 - 80, HEIGHT / 2 + 60);
-            gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 28));
             gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
-            gc.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2 - 10);
 
-            gc.setFont(javafx.scene.text.Font.font("Arial", 18));
-            gc.fillText("Press R to Restart", WIDTH / 2, HEIGHT / 2 + 25);
-            gc.fillText("Press ESC to Return to Main Menu", WIDTH / 2, HEIGHT / 2 + 55);
+            boolean allBricksDestroyed = bricks.stream()
+                    .filter(b -> !(b instanceof UnbreakableBrick))
+                    .allMatch(Brick::isDestroyed);
+
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 28));
+            if (allBricksDestroyed) {
+                gc.fillText("YOU WIN!", WIDTH / 2, HEIGHT / 2 - 20);
+            } else {
+                gc.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2 - 20);
+            }
+
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
+            gc.fillText("Final Score: " + scoreManager.getScoreString(), WIDTH / 2, HEIGHT / 2 + 10);
+            gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH / 2, HEIGHT / 2 + 30);
+            gc.fillText("Press R to Restart", WIDTH / 2, HEIGHT / 2 + 60);
+            gc.fillText("Press ESC to Return to Main Menu", WIDTH / 2, HEIGHT / 2 + 85);
         }
     }
 
     /**
-     * Draw an overlay when the game is pause
-     * Called when the player presses P .
+     * Draws the overlay when the game is paused.
+     * Called when the player presses P.
      */
     private void drawPauseOverlay(GraphicsContext gc) {
-        gc.setFill(Color.rgb(0, 0, 0, 0.5)); // translucent dark overlay
+        gc.setFill(Color.rgb(0, 0, 0, 0.5));
         gc.fillRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         gc.setFill(Color.WHITE);
-        gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 32));
         gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+        gc.setFont(javafx.scene.text.Font.font("Arial", javafx.scene.text.FontWeight.BOLD, 32));
         gc.fillText("PAUSED", canvas.getWidth() / 2, canvas.getHeight() / 2 - 20);
 
         gc.setFont(javafx.scene.text.Font.font("Arial", 18));
@@ -405,25 +403,29 @@ public class Game {
         gc.fillText("Press ESC to Return to Main Menu", canvas.getWidth() / 2, canvas.getHeight() / 2 + 50);
     }
 
-
     /**
      * Resets the game state and recreates paddle, ball, and bricks.
      * Called when the player presses R after game over.
      */
     private void restart() {
-        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 500, 15);
+        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
         balls = new ArrayList<>();
         balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
+
         bricks = Level.createLevel1();
-        scoreManager.reset();
         powerUps.clear();
+        scoreManager.reset();
+
+        // Reset power-up durations
         biggerPaddleDurationRemaining = 0.0;
         fastBallDurationRemaining = 0.0;
+        breakerBallDurationRemaining = 0.0;
+
         soundManager.resumeBackgroundMusic();
         gameOver = false;
         leftPressed = false;
         rightPressed = false;
-    
+
         if (canvas != null) {
             canvas.requestFocus();
         }

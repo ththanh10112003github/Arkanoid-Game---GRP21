@@ -6,11 +6,11 @@ import org.example.ball.Ball;
 import org.example.Paddle;
 
 /**
- * Power-up that makes the ball destroy all bricks in its path
+ * Power-up that allows the ball to destroy all bricks in its path
  * without bouncing for a limited time.
  */
 public class BreakerBall extends PowerUp {
-    private Color color = Color.RED; // visible difference
+    private final Color color = Color.GREEN;
     private boolean active = false;
 
     public BreakerBall(double x, double y, double size) {
@@ -20,17 +20,18 @@ public class BreakerBall extends PowerUp {
 
     @Override
     public String getId() {
-        return "breakerBall";
+        return "BreakerBall";
     }
 
-    @Override
-    public void apply(Ball ball) {
+    /** Activate breaker mode on a given ball */
+    public void applyToBall(Ball ball) {
         if (ball == null) return;
         active = true;
         ball.setBreakerMode(true);
         setCollected();
     }
 
+    /** Reset the effect when duration expires */
     @Override
     public void reset(Ball ball, Paddle paddle) {
         if (ball == null) return;
@@ -45,5 +46,14 @@ public class BreakerBall extends PowerUp {
         gc.fillOval(x, y, width, height);
         gc.setStroke(Color.BLACK);
         gc.strokeOval(x, y, width, height);
+
+        // Optional: draw a "B" to make it identifiable
+        gc.setFill(Color.WHITE);
+        gc.fillText("B", x + width / 3.0, y + height * 0.7);
+    }
+
+    @Override
+    public String getSoundEffect() {
+        return "powerup_breaker";
     }
 }
