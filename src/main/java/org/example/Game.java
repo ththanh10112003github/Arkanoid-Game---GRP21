@@ -443,27 +443,10 @@ public class Game {
      * Called when the player presses R after game over.
      */
     private void restart() {
-        paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
-        balls = new ArrayList<>();
-        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
-
-        bricks = Level.createLevel1();
-        powerUps.clear();
-        scoreManager.reset();
-
-        // Reset power-up durations
-        biggerPaddleDurationRemaining = 0.0;
-        fastBallDurationRemaining = 0.0;
-        breakerBallDurationRemaining = 0.0;
-
-        soundManager.resumeBackgroundMusic();
-        gameOver = false;
-        leftPressed = false;
-        rightPressed = false;
-
-        if (canvas != null) {
-            canvas.requestFocus();
-        }
+        stopGame(); // stop current loop and sounds
+        Stage stage = (Stage) canvas.getScene().getWindow();
+        Game newGame = new Game();
+        newGame.start(stage); // completely fresh game
     }
 
     /**
