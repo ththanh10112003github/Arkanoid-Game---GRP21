@@ -44,12 +44,8 @@ public class BreakerBall extends PowerUp {
         if (collected) return;
         gc.setFill(color);
         gc.fillOval(x, y, width, height);
-        gc.setStroke(Color.BLACK);
+        gc.setStroke(Color.WHITE);
         gc.strokeOval(x, y, width, height);
-
-        // Optional: draw a "B" to make it identifiable
-        gc.setFill(Color.WHITE);
-        gc.fillText("B", x + width / 3.0, y + height * 0.7);
     }
 
     @Override

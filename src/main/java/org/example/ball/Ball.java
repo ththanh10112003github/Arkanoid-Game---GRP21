@@ -11,11 +11,6 @@ public class Ball extends GameObject {
 
     /**
      * Constructs a Ball object with a given position, size, and initial velocity.
-     * @param x the initial x-coordinate of the ball
-     * @param y the initial y-coordinate of the ball
-     * @param size the diameter of the ball
-     * @param dx the initial horizontal velocity
-     * @param dy the initial vertical velocity
      */
     public Ball(double x, double y, double size, double dx, double dy) {
         super(x, y, size, size);
