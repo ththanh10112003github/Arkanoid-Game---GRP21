@@ -11,6 +11,8 @@ import javafx.stage.Stage;
 
 public class MainMenu {
 
+    private static boolean isFirstShow = true;
+
     public static void show(Stage stage) {
         Text title = new Text("ARKANOID");
         title.setFont(Font.font("Arial", FontWeight.EXTRA_BOLD, 48));
@@ -39,7 +41,7 @@ public class MainMenu {
         // Button actions
         playButton.setOnAction(e -> {
             Game game = new Game();
-            game.start(stage); // start the actual game
+            game.start(stage);
         });
 
         instructionsButton.setOnAction(e -> {
@@ -52,6 +54,13 @@ public class MainMenu {
 
         stage.setScene(menuScene);
         stage.setTitle("Arkanoid - Main Menu");
+        
+        // Only play menu music if this is the first show or coming back from game
+        if (isFirstShow || SoundManager.oneAndOnly().getCurrentBackgroundMusic() == null) {
+            SoundManager.oneAndOnly().playBackgroundMusic("menu_theme");
+            isFirstShow = false;
+        }
+
         stage.show();
     }
 

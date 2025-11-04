@@ -16,6 +16,10 @@ public class SoundManager {
     private boolean musicEnabled;
     private double musicVolume;
     private double effectsVolume;
+    
+    public MediaPlayer getCurrentBackgroundMusic() {
+        return currentBackgroundMusic;
+    }
 
     private SoundManager() {
         backgroundMusic = new HashMap<>();
@@ -36,9 +40,9 @@ public class SoundManager {
 
     private void loadSounds() {
         try {
-            // Load background music
+            // Load background music and themes
             loadBackgroundMusic("main_theme", "assets/audio/background_musics/main_theme.mp3");
-            //loadBackgroundMusic("menu_theme", "assets/audio/background_musics/menu_theme.mp3");     
+            loadBackgroundMusic("menu_theme", "assets/audio/background_musics/menu_theme.mp3");
 
             // Load sound effects
             loadSoundEffect("brick_break", "assets/audio/sound_effects/brick_break.mp3");

@@ -258,7 +258,7 @@ public class Game {
             }
         }
 
-// Check collision between paddle and power-ups
+        // Check collision between paddle and power-ups
         for (PowerUp p : powerUps) {
             if (!p.isCollected() && CollisionManager.isColliding(p, paddle)) {
                 String powerUpType = p.getId();
@@ -302,14 +302,14 @@ public class Game {
                         break;
                 }
 
-                break; // Only handle one per frame
+                break;
             }
         }
 
-// Remove collected power-ups
+        // Remove collected power-ups
         powerUps.removeIf(PowerUp::isCollected);
 
-// Handle balls falling below screen
+        // Handle balls falling below screen
         balls.removeIf(ball -> ball.getY() > HEIGHT);
         if (balls.isEmpty() && !gameOver) {
             if (scoreManager.loseLife()) {
@@ -323,7 +323,7 @@ public class Game {
             }
         }
 
-// Check win condition (all breakable bricks destroyed)
+        // Check win condition (all breakable bricks destroyed)
         if (bricks.stream().filter(b -> !(b instanceof UnbreakableBrick)).allMatch(Brick::isDestroyed)) {
             gameOver = true;
             soundManager.pauseBackgroundMusic();
@@ -331,10 +331,10 @@ public class Game {
             soundManager.playSoundEffect("victory");
         }
 
-// === Timers and duration handling ===
-        double delta = 1.0 / 60.0; // assuming 60 FPS
 
-// Bigger Paddle timer
+        double delta = 1.0 / 60.0;
+
+        // Bigger Paddle timer
         if (biggerPaddleDurationRemaining > 0) {
             biggerPaddleDurationRemaining -= delta;
             if (biggerPaddleDurationRemaining <= 0 && !balls.isEmpty()) {
@@ -343,7 +343,7 @@ public class Game {
             }
         }
 
-// Fast Ball timer
+        // Fast Ball timer
         if (fastBallDurationRemaining > 0) {
             fastBallDurationRemaining -= delta;
             if (fastBallDurationRemaining <= 0 && !balls.isEmpty()) {
@@ -352,7 +352,7 @@ public class Game {
             }
         }
 
-// Breaker Ball timer
+        // Breaker Ball timer
         if (breakerBallDurationRemaining > 0) {
             breakerBallDurationRemaining -= delta;
             if (breakerBallDurationRemaining <= 0 && !balls.isEmpty()) {
@@ -380,21 +380,21 @@ public class Game {
         for (Brick b : bricks) b.draw(gc);
         for (PowerUp p : powerUps) p.draw(gc);
 
-        // Display score and lives (explicit alignment & baseline)
+        // Display score and lives
         gc.setFill(Color.WHITE);
         gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
-        // ensure consistent baseline and alignment
+        
         gc.setTextAlign(javafx.scene.text.TextAlignment.LEFT);
         gc.setTextBaseline(javafx.geometry.VPos.TOP);
 
         gc.fillText("Score: " + scoreManager.getScoreString(), 30, 10);
-        // drawLives probably draws images at given x,y; keep same coords but anchored near top center
+
         scoreManager.drawLives(gc, heartImage, heartEmptyImage, WIDTH / 2 - 50, 8);
         gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH - 180, 10);
 
         // Display Game Over / Win overlay
         if (gameOver) {
-            // Make sure overlay text is centered
+            
             gc.setFill(Color.WHITE);
             gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
             gc.setTextBaseline(javafx.geometry.VPos.CENTER);
@@ -423,7 +423,7 @@ public class Game {
      * Called when the player presses P.
      */
     private void drawPauseOverlay(GraphicsContext gc) {
-        // Reset transform/state to ensure overlay is drawn in the right place
+       
         gc.setTransform(1, 0, 0, 1, 0, 0);
 
         gc.setFill(Color.rgb(0, 0, 0, 0.5));
@@ -440,26 +440,21 @@ public class Game {
         gc.fillText("Press ESC to Return to Main Menu", canvas.getWidth() / 2, canvas.getHeight() / 2 + 50);
     }
 
-    /**
-     * Resets the game state and recreates paddle, ball, and bricks.
-     * Called when the player presses R after game over.
-     */
+    
     private void restart() {
-        stopGame(); // stop current loop and sounds
+        stopGame();
         Stage stage = (Stage) canvas.getScene().getWindow();
         Game newGame = new Game();
-        newGame.start(stage); // completely fresh game
+        newGame.start(stage);
     }
 
-    /**
-     * Stops the game loop and music when leaving the game.
-     */
+    
     public void stopGame() {
         if (gameLoop != null) {
-            gameLoop.stop();  // Stop AnimationTimer
+            gameLoop.stop();
         }
-        soundManager.pauseBackgroundMusic(); // Stop background music
-        soundManager.stopAllSoundEffects();  // Stop any active sound effects
+        soundManager.pauseBackgroundMusic();
+        soundManager.stopAllSoundEffects();
     }
 
 }
