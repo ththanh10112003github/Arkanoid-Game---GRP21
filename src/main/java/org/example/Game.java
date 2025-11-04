@@ -54,11 +54,24 @@ public class Game {
     private boolean leftPressed, rightPressed;
 
 
-    // Game state
-    private boolean gameOver = false;
+    private enum GameState {
+        PLAYING,
+        LEVEL_TRANSITION,
+        GAME_OVER,
+        GAME_WON
+    }
+
+    private GameState gameState = GameState.PLAYING;
+    private int currentLevel = 1;
 
     Image heartImage;
     Image heartEmptyImage;
+    private final Difficulty difficulty;
+
+    public Game(Difficulty difficulty) {
+        this.difficulty = difficulty;
+    }
+
 
     /**
      * Initializes the JavaFX scene, sets up the game, and starts the game loop.
@@ -81,9 +94,10 @@ public class Game {
 
         // Initialize core game elements
         paddle = new Paddle(WIDTH / 2 - 60, HEIGHT - 40, 120, 15);
+        paddle.scaleWidth(difficulty.getPaddleWidthMultiplier());
         balls = new ArrayList<>();
-        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
-        bricks = Level.createLevel1();
+        balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5 * difficulty.getBallSpeedMultiplier(), 1.5 * difficulty.getBallSpeedMultiplier()));
+        bricks = Level.loadLevel(difficulty, currentLevel);
         scoreManager = new ScoreManager();
         soundManager = SoundManager.oneAndOnly();
 
@@ -129,8 +143,19 @@ public class Game {
      */
     private void setupControls(Scene scene, Canvas canvas) {
         scene.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
-            if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
+            if (gameState == GameState.PLAYING) {
+                if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
+                if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
+            } else if (gameState == GameState.LEVEL_TRANSITION) {
+                currentLevel++;
+                bricks = Level.loadLevel(difficulty, currentLevel);
+                balls.clear();
+                balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5 * difficulty.getBallSpeedMultiplier(), 1.5 * difficulty.getBallSpeedMultiplier()));
+                paddle.resetWidth();
+                paddle.scaleWidth(difficulty.getPaddleWidthMultiplier());
+                gameState = GameState.PLAYING;
+                soundManager.playBackgroundMusic("main_theme");
+            }
 
             // Return to Main Menu when ESC is pressed
             if (e.getCode() == KeyCode.ESCAPE) {
@@ -139,7 +164,7 @@ public class Game {
                 MainMenu.show((Stage) canvas.getScene().getWindow());
             }
 
-            if (e.getCode() == KeyCode.R && gameOver) {
+            if (e.getCode() == KeyCode.R && gameState == GameState.GAME_OVER) {
                 restart();
             }
 
@@ -163,9 +188,20 @@ public class Game {
         });
 
         canvas.setOnKeyPressed(e -> {
-            if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
-            if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
-            if (e.getCode() == KeyCode.R && gameOver) {
+            if (gameState == GameState.PLAYING) {
+                if (e.getCode() == KeyCode.LEFT || e.getCode() == KeyCode.A) leftPressed = true;
+                if (e.getCode() == KeyCode.RIGHT || e.getCode() == KeyCode.D) rightPressed = true;
+            } else if (gameState == GameState.LEVEL_TRANSITION) {
+                currentLevel++;
+                bricks = Level.loadLevel(difficulty, currentLevel);
+                balls.clear();
+                balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5 * difficulty.getBallSpeedMultiplier(), 1.5 * difficulty.getBallSpeedMultiplier()));
+                paddle.resetWidth();
+                paddle.scaleWidth(difficulty.getPaddleWidthMultiplier());
+                gameState = GameState.PLAYING;
+                soundManager.playBackgroundMusic("main_theme");
+            }
+            if (e.getCode() == KeyCode.R && gameState == GameState.GAME_OVER) {
                 restart();
             }
 
@@ -205,7 +241,7 @@ public class Game {
      * - Handles sound effects and background musics
      */
     private void update() {
-        if (gameOver) return;
+        if (gameState != GameState.PLAYING) return;
 
         paddle.update(leftPressed, rightPressed);
 
@@ -311,12 +347,12 @@ public class Game {
 
         // Handle balls falling below screen
         balls.removeIf(ball -> ball.getY() > HEIGHT);
-        if (balls.isEmpty() && !gameOver) {
+        if (balls.isEmpty() && gameState == GameState.PLAYING) {
             if (scoreManager.loseLife()) {
                 soundManager.playSoundEffect("life_lost");
                 balls.add(new Ball(WIDTH / 2, HEIGHT / 2, 10, 1.5, 1.5));
             } else {
-                gameOver = true;
+                gameState = GameState.GAME_OVER;
                 soundManager.oneAndOnly().stopAllSounds();
                 soundManager.stopAllSoundEffects();
                 soundManager.playSoundEffect("game_over");
@@ -325,7 +361,11 @@ public class Game {
 
         // Check win condition (all breakable bricks destroyed)
         if (bricks.stream().filter(b -> !(b instanceof UnbreakableBrick)).allMatch(Brick::isDestroyed)) {
-            gameOver = true;
+            if (currentLevel == 3) {
+                gameState = GameState.GAME_WON;
+            } else {
+                gameState = GameState.LEVEL_TRANSITION;
+            }
             soundManager.pauseBackgroundMusic();
             soundManager.stopAllSoundEffects();
             soundManager.playSoundEffect("victory");
@@ -393,28 +433,42 @@ public class Game {
         gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH - 180, 10);
 
         // Display Game Over / Win overlay
-        if (gameOver) {
+        if (gameState == GameState.GAME_OVER) {
             
             gc.setFill(Color.WHITE);
             gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
             gc.setTextBaseline(javafx.geometry.VPos.CENTER);
 
-            boolean allBricksDestroyed = bricks.stream()
-                    .filter(b -> !(b instanceof UnbreakableBrick))
-                    .allMatch(Brick::isDestroyed);
-
             gc.setFont(javafx.scene.text.Font.font("Consolas", 28));
-            if (allBricksDestroyed) {
-                gc.fillText("YOU WIN!", WIDTH / 2, HEIGHT / 2 - 20);
-            } else {
-                gc.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2 - 20);
-            }
+            gc.fillText("GAME OVER", WIDTH / 2, HEIGHT / 2 - 20);
 
             gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
             gc.fillText("Final Score: " + scoreManager.getScoreString(), WIDTH / 2, HEIGHT / 2 + 10);
             gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH / 2, HEIGHT / 2 + 30);
             gc.fillText("Press R to Restart", WIDTH / 2, HEIGHT / 2 + 60);
             gc.fillText("Press ESC to Return to Main Menu", WIDTH / 2, HEIGHT / 2 + 85);
+        } else if (gameState == GameState.GAME_WON) {
+            gc.setFill(Color.WHITE);
+            gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+            gc.setTextBaseline(javafx.geometry.VPos.CENTER);
+
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 28));
+            gc.fillText("YOU WIN!", WIDTH / 2, HEIGHT / 2 - 20);
+
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
+            gc.fillText("Final Score: " + scoreManager.getScoreString(), WIDTH / 2, HEIGHT / 2 + 10);
+            gc.fillText("High Score: " + scoreManager.getHighScoreString(), WIDTH / 2, HEIGHT / 2 + 30);
+            gc.fillText("Press ESC to Return to Main Menu", WIDTH / 2, HEIGHT / 2 + 60);
+        } else if (gameState == GameState.LEVEL_TRANSITION) {
+            gc.setFill(Color.WHITE);
+            gc.setTextAlign(javafx.scene.text.TextAlignment.CENTER);
+            gc.setTextBaseline(javafx.geometry.VPos.CENTER);
+
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 28));
+            gc.fillText("LEVEL " + currentLevel + " CLEARED", WIDTH / 2, HEIGHT / 2 - 20);
+
+            gc.setFont(javafx.scene.text.Font.font("Consolas", 16));
+            gc.fillText("Press any key to continue", WIDTH / 2, HEIGHT / 2 + 20);
         }
     }
 
@@ -444,7 +498,7 @@ public class Game {
     private void restart() {
         stopGame();
         Stage stage = (Stage) canvas.getScene().getWindow();
-        Game newGame = new Game();
+        Game newGame = new Game(difficulty);
         newGame.start(stage);
     }
 
